@@ -26,8 +26,16 @@ jobs:
           });
           if (!tokenResponse.ok) throw new Error('Unable to obtain scheduler identity');
           const {value} = await tokenResponse.json();
-          const response = await fetch(url, {method: 'POST', headers: {Authorization: `Bearer ${value}`, 'X-Scheduler': 'github-actions', 'X-Update-Trigger': process.env.UPDATE_TRIGGER}, signal: AbortSignal.timeout(65000)});
-          const body = await response.text();
-          if (!response.ok) throw new Error(`Update returned HTTP ${response.status}`);
-          console.log(body);
+          for (let attempt = 0; attempt < 6; attempt++) {
+            const response = await fetch(url, {method: 'POST', headers: {Authorization: `Bearer ${value}`, 'X-Scheduler': 'github-actions', 'X-Update-Trigger': process.env.UPDATE_TRIGGER}, signal: AbortSignal.timeout(65000)});
+            const body = await response.json();
+            if (body.busy && attempt < 5) {
+              console.log('Another update is running; retrying in ten seconds.');
+              await new Promise(resolve => setTimeout(resolve, 10000));
+              continue;
+            }
+            if (!response.ok) throw new Error(`Update returned HTTP ${response.status}`);
+            console.log(JSON.stringify(body));
+            break;
+          }
           JS

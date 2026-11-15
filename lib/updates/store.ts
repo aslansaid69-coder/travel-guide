@@ -107,3 +107,8 @@ export async function updateDashboard() {
       await sql`SELECT id,job,subject,status,attempts,last_error,created_at,sent_at FROM notification_outbox ORDER BY created_at DESC LIMIT 20`,
   };
 }
+
+export async function logBusyRun(id: string, job: string, actor: string) {
+  const sql = database();
+  await sql`INSERT INTO update_runs(id,job,actor,status,finished_at,summary) VALUES(${id},${job},${actor},'skipped',now(),'{"reason":"Another update is running. Scheduler may retry."}'::jsonb) ON CONFLICT DO NOTHING`;
+}

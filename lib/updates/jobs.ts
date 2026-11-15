@@ -13,7 +13,10 @@ export async function runUpdate(
   const now = new Date();
   const id = updateRunKey(job, now, manual);
   const owner = randomUUID();
-  if (!(await lease(owner))) return { ok: false, busy: true, id };
+  if (!(await lease(owner))) {
+    await logBusyRun(`${id}:busy:${owner}`, job, actor);
+    return { ok: false, busy: true, id };
+  }
   try {
     if (!(await beginRun(id, job, actor)))
       return { ok: true, skipped: true, id };

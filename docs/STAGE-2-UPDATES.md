@@ -32,7 +32,7 @@ Three GitHub workflows now serve separate jobs:
 - `daily-updates.yml`: daily 05:00 Almaty target.
 - `weather-refresh.yml`: hourly weather refresh.
 
-They use short-lived GitHub OIDC tokens with exact workflow, immutable repository/owner IDs, main-branch, audience and event restrictions. No new GitHub secret is needed. Each run has a durable idempotency ID; manual runs count at most once per five-minute window and do not consume that day’s scheduled run. An exclusive lease prevents an hourly/daily/manual overlap.
+They use short-lived GitHub OIDC tokens with exact workflow, immutable repository/owner IDs, main-branch, audience and event restrictions. No new GitHub secret is needed. Each run has a durable idempotency ID; manual runs count at most once per five-minute window and do not consume that day’s scheduled run. An exclusive lease prevents an hourly/daily/manual overlap. Busy attempts are logged as skipped without incrementing or resetting failure counts; workflows retry the busy response up to five times at ten-second intervals.
 
 **GitHub scheduled jobs may be delayed or dropped and can be disabled after repository inactivity.** This is a target time, not a guaranteed exact-minute SLA. For tighter timing, configure QStash and run `npm run schedules:configure`, which creates the camera, daily timezone-aware and hourly schedules. Disable the three GitHub schedules when switching; do not run both schedulers. No free scheduler guarantees outage-free execution.
 

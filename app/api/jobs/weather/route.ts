@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     revalidatePath("/");
     revalidateTag("events", { expire: 0 });
     return Response.json(result, {
-      status: result.ok ? 200 : 503,
+      status: result.busy ? 409 : result.ok ? 200 : 503,
       headers: { "Cache-Control": "no-store" },
     });
   } catch {
