@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { database } from "../lib/db";
+import { runUpdate } from "../lib/updates/jobs";
 import {
   beginRun,
   saveResult,
@@ -66,6 +67,18 @@ try {
   assert.equal(await lease("integration-second"), false);
 } finally {
   await release("integration-first");
+}
+assert.equal(await lease("integration-busy-job"), true);
+try {
+  const before = await sql`SELECT failures FROM update_job_state WHERE job='weather'`;
+  const busy = await runUpdate("weather", "integration-busy-worker", true);
+  assert.equal(busy.busy, true);
+  const skipped = await sql`SELECT status FROM update_runs WHERE actor='integration-busy-worker' ORDER BY started_at DESC LIMIT 1`;
+  assert.equal(skipped[0].status, "skipped");
+  const after = await sql`SELECT failures FROM update_job_state WHERE job='weather'`;
+  assert.deepEqual(after, before);
+} finally {
+  await release("integration-busy-job");
 }
 console.log(
   "Integration passed: last-good retention, timestamps, alert threshold, deduplication, recovery and exclusive job lease.",

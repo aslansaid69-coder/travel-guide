@@ -3,7 +3,7 @@ import { database } from "@/lib/db";
 import type { WeatherData } from "@/lib/weather/types";
 import { adapters, clothingAdapter, clothingResult } from "./adapters";
 import { runAdapters, updateRunKey } from "./engine";
-import { beginRun, finishRun, lease, release, saveResult } from "./store";
+import { beginRun, finishRun, lease, release, saveResult, logBusyRun } from "./store";
 import { drainAlerts } from "./alerts";
 export async function runUpdate(
   job: "daily" | "weather",
