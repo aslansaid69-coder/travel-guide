@@ -18,10 +18,11 @@ export async function autoPublish(records: unknown[], sourceKey: string) {
     )
       continue;
     const existing = (
-      await database()`SELECT status FROM hub_catalog WHERE id=${item.id}`
+      await database()`SELECT status,owner_edited FROM hub_catalog WHERE id=${item.id}`
     )[0];
     // Optional discovery automation must never unhide a place or overwrite an owner-approved version.
-    if (existing && existing.status !== "pending") continue;
+    if (existing && (existing.status !== "pending" || existing.owner_edited))
+      continue;
     const next: CatalogItem = {
       ...item,
       status: "approved",

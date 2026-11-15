@@ -62,6 +62,16 @@ export async function planSlots(
             409,
             `The plan time must match the selected slot for ${item.name}.`,
           );
+        if (
+          stop.duration >
+          (new Date(rows[0].ends_at).valueOf() -
+            new Date(rows[0].starts_at).valueOf()) /
+            60000
+        )
+          throw new HttpError(
+            409,
+            `The visit duration exceeds the slot for ${item.name}.`,
+          );
         ids.push(stop.slotId);
       }
     }

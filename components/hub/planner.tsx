@@ -192,12 +192,15 @@ export function Planner({ initial, id }: { initial?: Plan; id?: string }) {
       () => conflicts(plan, items, weather),
       [plan, items, weather],
     );
+  const routeKey =
+    plan.days[day]?.stops.map((stop) => stop.itemId).join("|") || "";
   const route = useMemo(
     () =>
-      plan.days[day]?.stops
-        .map((s) => items.find((i) => i.id === s.itemId))
+      routeKey
+        .split("|")
+        .map((id) => items.find((i) => i.id === id))
         .filter((i): i is CatalogItem => !!i) || [],
-    [plan, day, items],
+    [routeKey, items],
   );
   const update = (next: Plan) => {
     if (!canEdit) return;
@@ -667,7 +670,11 @@ export function Planner({ initial, id }: { initial?: Plan; id?: string }) {
                   available = slots.filter(
                     (slot) =>
                       slot.item_id === s.itemId &&
-                      slot.remaining >= plan.adults + plan.children,
+                      localDay(new Date(slot.starts_at).valueOf() / 1000) ===
+                        dayDate(plan.startDate, day) &&
+                      ((!slot.blackout &&
+                        slot.remaining >= plan.adults + plan.children) ||
+                        slot.id === s.slotId),
                   );
                 return (
                   <li
@@ -763,6 +770,11 @@ export function Planner({ initial, id }: { initial?: Plan; id?: string }) {
                               patch(index, {
                                 slotId: slot.id,
                                 start: localTime,
+                                duration: Math.round(
+                                  (new Date(slot.ends_at).valueOf() -
+                                    new Date(slot.starts_at).valueOf()) /
+                                    60000,
+                                ),
                               });
                             } else patch(index, { slotId: undefined });
                           }}
@@ -1144,6 +1156,11 @@ export function Planner({ initial, id }: { initial?: Plan; id?: string }) {
                 {requestData.quote.status}
               </p>
               <p className="hub-prewrap">{requestData.quote.terms}</p>
+              {requestData.quote.breakdown?.adjustmentNote && (
+                <p className="hub-prewrap">
+                  {requestData.quote.breakdown.adjustmentNote}
+                </p>
+              )}
               <p className="hub-caption">
                 Expires:{" "}
                 {new Date(requestData.quote.expires_at).toLocaleString()}

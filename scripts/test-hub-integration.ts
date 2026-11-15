@@ -34,7 +34,9 @@ const p = await createPlan(plan),
   slot2 = `${prefix}-slot2`,
   q = `${prefix}-quote`,
   session = `${prefix}-session`;
-const originalSettings=(await sql`SELECT data FROM hub_settings WHERE id=true`)[0].data;
+const originalSettings = (
+  await sql`SELECT data FROM hub_settings WHERE id=true`
+)[0].data;
 try {
   await editable(p.id, p.editToken);
   const mailLink = await privateLink(p.id);
@@ -70,6 +72,9 @@ try {
   for (const id of [r1, r2, r3])
     await sql`INSERT INTO hub_requests(id,plan_id,guest,idempotency_key) VALUES(${id},${p.id},'{"email":"integration@example.com"}'::jsonb,${id})`;
   await sql`INSERT INTO hub_slots(id,item_id,starts_at,ends_at,capacity) VALUES(${slot},'panfilov',now()+interval '3 days',now()+interval '3 days 1 hour',3),(${slot2},'panfilov',now()+interval '4 days',now()+interval '4 days 1 hour',1)`;
+  await assert.rejects(
+    sql`SELECT hub_save_slot(${prefix + "-overlap"},'panfilov',now()+interval '3 days 15 minutes',now()+interval '3 days 45 minutes',4,false)`,
+  );
   const outcomes = await Promise.allSettled(
     [r1, r2].map(
       (id) =>
@@ -92,6 +97,9 @@ try {
     )[0].n,
     0,
     "Failed package reserves no partial inventory",
+  );
+  await assert.rejects(
+    sql`SELECT hub_save_slot(${slot},'panfilov',now()+interval '3 days',now()+interval '3 days 1 hour',1,false)`,
   );
   await sql`UPDATE hub_holds SET state='held',expires_at=now()-interval '1 minute' WHERE request_id=${winner}`;
   await sql`SELECT hub_reserve(${loser},${JSON.stringify([slot])}::jsonb,2,false)`;
@@ -144,13 +152,44 @@ try {
     sql`SELECT hub_apply_payment(${prefix + "-bad-event"},${session},999,'KZT')`,
   );
   await sql`UPDATE hub_settings SET data=jsonb_set(data,'{autoPublish}','true'::jsonb) WHERE id=true`;
-  const candidate=itemSchema.parse({id:prefix+'-auto',name:'Test discovery',category:'museum',lat:43,lng:76,rating:4.5,reviews:100,source:'Permitted independent test feed',sourceUrl:'https://example.com/allowed',price:{type:'fixed',min:1000,max:1000,currency:'KZT',source:'owner-confirmed',updatedAt:'2026-11-16'}});
-  assert.equal(await autoPublish([candidate],'integration.feed'),1);
-  const published=(await sql`SELECT data,status FROM hub_catalog WHERE id=${candidate.id}`)[0];
-  assert.equal(published.status,'approved');assert.equal(published.data.price.source,'estimated');
+  const candidate = itemSchema.parse({
+    id: prefix + "-auto",
+    name: "Test discovery",
+    category: "museum",
+    lat: 43,
+    lng: 76,
+    rating: 4.5,
+    reviews: 100,
+    source: "Permitted independent test feed",
+    sourceUrl: "https://example.com/allowed",
+    price: {
+      type: "fixed",
+      min: 1000,
+      max: 1000,
+      currency: "KZT",
+      source: "owner-confirmed",
+      updatedAt: "2026-11-16",
+    },
+  });
+  assert.equal(await autoPublish([candidate], "integration.feed"), 1);
+  const published = (
+    await sql`SELECT data,status FROM hub_catalog WHERE id=${candidate.id}`
+  )[0];
+  assert.equal(published.status, "approved");
+  assert.equal(published.data.price.source, "estimated");
   await sql`UPDATE hub_catalog SET status='hidden' WHERE id=${candidate.id}`;
-  assert.equal(await autoPublish([{...candidate,name:'Must remain hidden'}],'integration.feed'),0);
-  assert.equal((await sql`SELECT data,status FROM hub_catalog WHERE id=${candidate.id}`)[0].status,'hidden');
+  assert.equal(
+    await autoPublish(
+      [{ ...candidate, name: "Must remain hidden" }],
+      "integration.feed",
+    ),
+    0,
+  );
+  assert.equal(
+    (await sql`SELECT data,status FROM hub_catalog WHERE id=${candidate.id}`)[0]
+      .status,
+    "hidden",
+  );
   console.log(
     "Hub integration passed: private access, no public PII, optimistic saves, PDF, CSRF/admin guards, concurrent capacity, atomic rollback, expiry, webhook deduplication and cancellation.",
   );

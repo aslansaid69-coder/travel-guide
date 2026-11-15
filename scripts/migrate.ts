@@ -12,6 +12,8 @@ for (const file of [
   "001-camera-operations.sql",
   "002-source-updates.sql",
   "003-travel-hub.sql",
+  "004-discovery-review.sql",
+  "005-inventory-guards.sql",
 ]) {
   const migration = await readFile(
     new URL(`../migrations/${file}`, import.meta.url),

@@ -39,7 +39,7 @@ export async function audit(
 export async function saveCatalog(item: CatalogItem, staff: Staff) {
   const sql = database();
   await sql.transaction([
-    sql`INSERT INTO hub_catalog(id,data,status) VALUES(${item.id},${JSON.stringify(item)}::jsonb,${item.status}) ON CONFLICT(id) DO UPDATE SET data=EXCLUDED.data,status=EXCLUDED.status,updated_at=now()`,
+    sql`INSERT INTO hub_catalog(id,data,status,owner_edited) VALUES(${item.id},${JSON.stringify(item)}::jsonb,${item.status},${staff.id !== "auto-publish"}) ON CONFLICT(id) DO UPDATE SET data=EXCLUDED.data,status=EXCLUDED.status,owner_edited=EXCLUDED.owner_edited,updated_at=now()`,
     sql`INSERT INTO admin_audit(actor,action,resource,details) VALUES(${staff.id},'catalog.save',${item.id},${JSON.stringify({ status: item.status })}::jsonb)`,
   ]);
 }

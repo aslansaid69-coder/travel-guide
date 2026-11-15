@@ -647,13 +647,14 @@ export async function handle(request: Request, path: string[]) {
         .parse(b.slot);
       if (new Date(slot.end) <= new Date(slot.start))
         throw new HttpError(400, "End time must follow start time.");
-      const changed =
-        await sql`INSERT INTO hub_slots(id,item_id,starts_at,ends_at,capacity,blackout) VALUES(${slot.id || randomUUID()},${slot.itemId},${slot.start},${slot.end},${slot.capacity},${slot.blackout}) ON CONFLICT(id) DO UPDATE SET capacity=EXCLUDED.capacity,blackout=EXCLUDED.blackout WHERE EXCLUDED.capacity>=(SELECT COALESCE(sum(quantity),0) FROM hub_holds WHERE slot_id=hub_slots.id AND (state='confirmed' OR (state='held' AND expires_at>now()))) RETURNING id`;
-      if (!changed.length)
+      try {
+        await sql`SELECT hub_save_slot(${slot.id || randomUUID()},${slot.itemId},${slot.start},${slot.end},${slot.capacity},${slot.blackout})`;
+      } catch {
         throw new HttpError(
           409,
-          "Capacity cannot be lower than existing active reservations.",
+          "This slot overlaps another slot, belongs to another service, or has capacity below active reservations.",
         );
+      }
       await audit(staff.id, "inventory.save", slot.itemId);
       return json({ ok: true });
     }

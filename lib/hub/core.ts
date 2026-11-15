@@ -167,7 +167,8 @@ export function estimate(
         name: item?.name || "Unavailable place",
         min: Math.round((min ?? 0) * factor),
         max: Math.round((max ?? 0) * factor),
-        confirmed: !!p && p.source === "owner-confirmed",
+        confirmed:
+          !!p && p.source === "owner-confirmed" && p.currency === "KZT",
         unknown: min === null || max === null,
         note: p?.note || "Price needs confirmation by our team.",
       });

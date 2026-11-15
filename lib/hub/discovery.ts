@@ -8,15 +8,16 @@ async function overpass(query: string) {
     ? [process.env.OVERPASS_ENDPOINT]
     : [
         "https://overpass.private.coffee/api/interpreter",
-        "https://overpass-api.de/api/interpreter",
+        "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
       ];
   for (const endpoint of endpoints) {
     try {
       const url = new URL(endpoint);
       if (url.protocol !== "https:" || url.username || url.password)
         throw new Error("Invalid source");
-      url.searchParams.set("data", query);
       const response = await fetch(url, {
+        method: "POST",
+        body: new URLSearchParams({ data: query }),
         headers: {
           Accept: "application/json",
           "User-Agent":
@@ -39,7 +40,7 @@ export async function discoverOSM() {
   const conf = await settings();
   if (!conf.discoveryEnabled) return { items: [], disabled: true };
   const query =
-    '[out:json][timeout:10];(nwr(around:4500,43.2389,76.8897)[tourism~"attraction|museum|viewpoint"][name];nwr(around:4500,43.2389,76.8897)[amenity~"restaurant|cafe"][name];nwr(around:4500,43.2389,76.8897)[shop~"mall|craft|souvenir"][name];);out center tags 80;';
+    '[out:json][timeout:10];(nwr(around:4500,43.2389,76.8897)[tourism~"attraction|museum|viewpoint"][name];nwr(around:4500,43.2389,76.8897)[amenity~"restaurant|cafe"][name];nwr(around:4500,43.2389,76.8897)[shop~"mall|craft|souvenir"][name];nwr(around:4500,43.2389,76.8897)[leisure~"park|sports_centre|water_park"][name];nwr(around:4500,43.2389,76.8897)[natural=beach][name];);out center tags 80;';
   const parsed = await overpass(query);
   if (!Array.isArray(parsed.elements) || !parsed.elements.length)
     throw new Error(
@@ -60,38 +61,47 @@ export async function discoverOSM() {
             ? "museum"
             : t.tourism === "viewpoint"
               ? "viewpoint"
-              : t.shop
-                ? "shop"
-                : "activity";
+              : t.leisure === "park"
+                ? "park"
+                : t.natural === "beach"
+                  ? "beach"
+                  : t.shop
+                    ? "shop"
+                    : "activity";
     const id = `osm-${e.type}-${e.id}`,
       url = `https://www.openstreetmap.org/${e.type}/${e.id}`;
-    items.push(
-      itemSchema.parse({
-        id,
-        name: t["name:en"] || t.name,
-        nameRu: t["name:ru"] || t.name,
-        description: `${category === "restaurant" ? "A restaurant" : category === "cafe" ? "A café" : "A local " + category} in Almaty. Discovered from OpenStreetMap; details need owner review.`,
-        category,
-        lat,
-        lng,
-        outdoor: !["restaurant", "cafe", "museum", "shop"].includes(category),
-        hours: t.opening_hours || "",
-        phone: t.phone || t["contact:phone"] || "",
-        website: t.website || t["contact:website"] || "",
-        source: "© OpenStreetMap contributors · ODbL",
-        sourceUrl: url,
-        osmId: `${e.type}/${e.id}`,
-        closed: !!(t.disused || t.abandoned || t["disused:amenity"]),
-        status: "pending",
-        verifiedAt: new Date().toISOString(),
-      }),
-    );
+    const candidate = itemSchema.safeParse({
+      id,
+      name: t["name:en"] || t.name,
+      nameRu: t["name:ru"] || t.name,
+      description: `${category === "restaurant" ? "A restaurant" : category === "cafe" ? "A café" : "A local " + category} in Almaty. Discovered from OpenStreetMap; details need owner review.`,
+      category,
+      lat,
+      lng,
+      outdoor: !["restaurant", "cafe", "museum", "shop"].includes(category),
+      hours: t.opening_hours || "",
+      phone: t.phone || t["contact:phone"] || "",
+      website: t.website || t["contact:website"] || "",
+      source: "© OpenStreetMap contributors · ODbL",
+      sourceUrl: url,
+      osmId: `${e.type}/${e.id}`,
+      closed: [t.disused, t.abandoned, t["disused:amenity"]].some(
+        (v) => !!v && v !== "no",
+      ),
+      status: "pending",
+      verifiedAt: new Date().toISOString(),
+    });
+    if (candidate.success) items.push(candidate.data);
   }
+  if (!items.length)
+    throw new Error(
+      "Source OSM returned no valid places; existing catalog retained.",
+    );
   const sql = database();
   await sql.transaction(
     items.map(
       (i) =>
-        sql`INSERT INTO hub_catalog(id,data,status) VALUES(${i.id},${JSON.stringify(i)}::jsonb,'pending') ON CONFLICT(id) DO UPDATE SET data=CASE WHEN hub_catalog.status='pending' THEN EXCLUDED.data ELSE hub_catalog.data END,updated_at=CASE WHEN hub_catalog.status='pending' THEN now() ELSE hub_catalog.updated_at END`,
+        sql`INSERT INTO hub_catalog(id,data,status) VALUES(${i.id},${JSON.stringify(i)}::jsonb,'pending') ON CONFLICT(id) DO UPDATE SET data=CASE WHEN hub_catalog.status='pending' AND hub_catalog.owner_edited=false THEN EXCLUDED.data ELSE hub_catalog.data END,updated_at=CASE WHEN hub_catalog.status='pending' AND hub_catalog.owner_edited=false THEN now() ELSE hub_catalog.updated_at END`,
     ),
   );
   return { count: items.length, items };
@@ -205,7 +215,9 @@ export async function closureScan() {
   const flagged = d.elements.filter(
     (e: { tags: Record<string, string> }) =>
       e.tags &&
-      (e.tags.disused || e.tags.abandoned || e.tags["disused:amenity"]),
+      [e.tags.disused, e.tags.abandoned, e.tags["disused:amenity"]].some(
+        (v) => !!v && v !== "no",
+      ),
   );
   const conf = await settings();
   for (const e of flagged) {

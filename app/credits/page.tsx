@@ -72,6 +72,27 @@ export default function Credits() {
           may change. This is an independent guide, not an official tourism
           service.
         </p>
+        <h2>Maps, catalog data & fonts</h2>
+        <p>
+          Map data and OSM-derived catalog records are credited to{" "}
+          <a
+            href="https://www.openstreetmap.org/copyright"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            OpenStreetMap contributors
+          </a>
+          . Their source and attribution remain attached to each listing. Owner
+          text and independently supplied photographs retain their own source
+          credits. Google details, when configured, are fetched live and
+          attributed separately. Driving routes, when configured, are credited
+          to openrouteservice by HeiGIT and OpenStreetMap contributors.
+        </p>
+        <p>
+          PDF exports embed Noto Sans under the SIL Open Font License; its
+          licence is included with the project source. The website uses Inter
+          and DM Serif Display.
+        </p>
         <a className="button button-outline" href="/">
           Back to Almaty
         </a>
