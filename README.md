@@ -4,7 +4,7 @@ A responsive English travel guide built with **Next.js 16, React 19, TypeScript,
 
 ## Run locally
 
-Use Node.js 22 or newer.
+Use Node.js 22 LTS (the deployed runtime).
 
 ```sh
 npm ci
@@ -24,11 +24,11 @@ Fonts and photos are served locally. No Google Fonts request, remote image key, 
 
 ## Deploy to Vercel
 
-1. Import `aslansaid69-coder/travel-guide` into Vercel. Select Next.js and Node 22+. Repository root is the project root.
+1. Import `aslansaid69-coder/travel-guide` into Vercel. Select Next.js and Node 22. Repository root is the project root.
 2. Set `NEXT_PUBLIC_SITE_URL` to the final HTTPS domain. This controls canonical URLs, Open Graph URLs, robots.txt and sitemap.xml. Redeploy after changing it.
 3. Add a strong `CRON_SECRET` (for example, generate one using `openssl rand -hex 32`).
 4. Add email credentials if you want the contact form to deliver messages.
-5. Deploy. `vercel.json` schedules `/api/cron/events` daily at **02:00 UTC / 07:00 Almaty**. Vercel sends the secret in an Authorization Bearer header. Confirm cron availability on your plan.
+5. Deploy. `vercel.json` schedules `/api/cron/events` daily at **02:00 UTC / 07:00 Almaty**. Vercel sends the secret in an Authorization Bearer header. The linked Hobby plan runs this once daily within the 07:00–07:59 Almaty window.
 
 ## Deploy to Netlify
 
