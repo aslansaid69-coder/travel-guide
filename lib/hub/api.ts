@@ -79,6 +79,8 @@ export async function handle(request: Request, path: string[]) {
     sql = database();
   const method = request.method;
   if (method === "GET") {
+    if (resource === "availability")
+      return json({ slots: await availableSlots() });
     if (resource === "catalog") {
       const [items, conf, fx, slots] = await Promise.all([
         catalog(),

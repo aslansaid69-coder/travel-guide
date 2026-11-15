@@ -91,6 +91,14 @@ export function Planner({ initial, id }: { initial?: Plan; id?: string }) {
         }
       })
       .catch((e) => setMessage(e.message));
+    const availabilityTimer = setInterval(() => {
+      if (!document.hidden)
+        void api("availability")
+          .then((data) => {
+            if (live) setSlots(data.slots);
+          })
+          .catch(() => {});
+    }, 60000);
     void fetch("/api/weather")
       .then((r) => r.json())
       .then((d) => {
@@ -148,6 +156,7 @@ export function Planner({ initial, id }: { initial?: Plan; id?: string }) {
     }
     return () => {
       live = false;
+      clearInterval(availabilityTimer);
     };
   }, [id]);
   useEffect(() => {
@@ -893,15 +902,21 @@ export function Planner({ initial, id }: { initial?: Plan; id?: string }) {
             </label>
             <p className="hub-caption">{t("Total priced portion")}</p>
             <div className="hub-total">
-              {quote.displayRate
-                ? `${money(quote.min * quote.displayRate, currency)} – ${money(quote.max * quote.displayRate, currency)}`
-                : "Exchange rate unavailable"}
+              {quote.lines.length > 0 &&
+              quote.lines.every((line) => line.unknown)
+                ? t("Price to confirm")
+                : quote.displayRate
+                  ? `${money(quote.min * quote.displayRate, currency)} – ${money(quote.max * quote.displayRate, currency)}`
+                  : "Exchange rate unavailable"}
             </div>
             <p>
               {t("Per person")}:{" "}
-              {quote.displayRate
-                ? `${money(quote.perPerson.min * quote.displayRate, currency)} – ${money(quote.perPerson.max * quote.displayRate, currency)}`
-                : "—"}
+              {quote.lines.length > 0 &&
+              quote.lines.every((line) => line.unknown)
+                ? "—"
+                : quote.displayRate
+                  ? `${money(quote.perPerson.min * quote.displayRate, currency)} – ${money(quote.perPerson.max * quote.displayRate, currency)}`
+                  : "—"}
             </p>
             {quote.unknown > 0 && (
               <p className="hub-unpriced">
@@ -939,7 +954,7 @@ export function Planner({ initial, id }: { initial?: Plan; id?: string }) {
             </p>
             <button
               className="button button-accent"
-              disabled={pending}
+              disabled={pending || !plan.days.some((day) => day.stops.length)}
               onClick={() => setIntent("booking")}
             >
               {t("Book this itinerary")}
@@ -947,7 +962,7 @@ export function Planner({ initial, id }: { initial?: Plan; id?: string }) {
             </button>
             <button
               className="button button-outline"
-              disabled={pending}
+              disabled={pending || !plan.days.some((day) => day.stops.length)}
               onClick={() => setIntent("adjustment")}
             >
               {t("Ask a manager to adjust it")}

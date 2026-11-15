@@ -1,5 +1,7 @@
 # Stage 2 — weather and durable updates
 
+This records the stage-2 delivery. Stages 3–8 were subsequently implemented together; use [Travel hub setup](TRAVEL-HUB-SETUP.md) for the current catalog, menus, itinerary, booking, staff and integration configuration.
+
 Stack inspected before changes: Next.js 16.4.6 App Router, React 19.3.1, TypeScript, Tailwind CSS 4.3.5, Node 22, Vercel, Neon Postgres/Auth, GitHub Actions/OIDC. Existing ipcam.kz camera monitoring remains separate. No paid service was purchased.
 
 ## Delivered
