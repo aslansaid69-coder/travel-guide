@@ -107,6 +107,7 @@ export function Places() {
                 <div className="place-image">
                   <Image
                     src={p.image}
+                    unoptimized={p.image.startsWith("https://")}
                     alt={p.alt}
                     fill
                     sizes="(max-width: 700px) 100vw, 33vw"
