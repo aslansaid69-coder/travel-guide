@@ -70,19 +70,28 @@ tests/                Date-window, permission, parsing and contact tests
 docs/INTEGRATIONS.md   Camera investigation and source details
 ```
 
-## Cameras
+## Cameras — upgraded stage 1
 
-Edit `data/cameras.json`. Supported `type` values:
+Only direct ipcam.kz HLS streams remain. RTSP.me, World-Cam links and external-player fallback cards are removed. The owner's 2026-11-16 instruction explicitly retains ipcam.kz. `data/cameras.json` is the approved seed; live configuration and health now persist in Postgres.
 
-- `hls`: HTTPS `.m3u8` stream; native HLS on Safari, dynamically imported hls.js elsewhere.
-- `iframe`: an explicitly supplied embed URL, including a permitted YouTube live embed.
-- `external`: a source-link card when embedding is unavailable.
+- `/api/cameras`: public visible cameras; unavailable database fails closed.
+- `/admin/cameras`: owner workspace, email-code login, status/history, validate-and-publish, manual hide/show, run check.
+- `/api/jobs/cameras`: signed scheduler or server-secret endpoint. A public caller cannot trigger checks.
+- `.github/workflows/camera-health.yml`: target every 15 minutes (7, 22, 37, 52 past each hour), short-lived GitHub OIDC identity. No repository secret is needed. GitHub can delay scheduled runs; use the optional QStash setup for tighter scheduling.
 
-Each entry contains `id`, `name`, `location`, `type`, `streamUrl`, `sourceUrl`, `sourceName`, `poster`, `posterAlt`, `verifiedAt`, and `note`. Use an independently licensed local poster and descriptive alt text. The caption explicitly identifies posters as scenic previews.
+The monitor validates redirects, every embedded HLS URI, a media playlist and real MPEG-TS/fMP4 segment bytes, with DNS pinning/private-address rejection and bounded downloads. Three consecutive failed windows hide the camera; a later passing check restores it unless manually hidden. World-Cam/RTSP.me incidents create a persistent block and are never automatically restored. Visual overlays or successful browser decoding cannot be inferred from a server segment probe; an actual player shows Live now only while video is playing. New cameras currently accept HLS only; unsupported embeds are rejected.
 
-Players make no provider requests until a visitor clicks. HLS errors/timeouts show a **Watch live** source link. A **Live now** pulsing badge appears only after video begins playing. Cross-origin iframes cannot reliably report internal stream errors to this app, so the source link remains visible beneath them. Third-party player interfaces can use the visitor's browser language or the provider's language; all guide-owned text is English.
+Setup (already applied to the connected production database):
 
-Verified 2026-11-15: three HLS manifests returned HTTP 200 with CORS; Medeu's published iframe returned HTTP 200 but its player reported provider-side access restricted; the older cam2 feed returned 404. Both are configured as external fallbacks. A tested HLS player timed out in the in-app browser and correctly displayed its source fallback; full live playback was not confirmed there. Source response is not a guarantee of continuous playback. Full URLs and evidence are in `docs/INTEGRATIONS.md`.
+```sh
+npm run db:migrate
+```
+
+Staff env: `DATABASE_URL`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_COOKIE_SECRET`, `OWNER_EMAILS`. Staff API/page authorization is enforced server-side and requires a verified email in the owner allowlist. Managed shared auth email is available for initial testing; configure a custom SMTP sender before production staff rollout. No password is stored by this app. The owner completes the email code sign-in themselves.
+
+Additional hosts require `CAMERA_ALLOWED_HOSTS` in Vercel; add exact approved operator/CDN hosts, never wildcard domains. The admin must record embedding permission for every added feed. To use QStash instead of GitHub scheduling, set the three `QSTASH_*` values from `.env.example`, run `npm run schedules:configure`, and disable the GitHub workflow; do not run both.
+
+See [architecture and stage gates](docs/UPGRADE-ARCHITECTURE.md) and [camera audit](docs/CAMERA-AUDIT.md). The larger travel-hub features are delivered in eight owner-confirmed stages; stages 2–8 are not implemented by the stage-1 change.
 
 ## Events
 

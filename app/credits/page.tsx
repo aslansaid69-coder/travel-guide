@@ -53,13 +53,11 @@ export default function Credits() {
         </div>
         <h2>Live cameras</h2>
         <p>
-          Camera discovery and original listings:{" "}
-          <a href="https://world-cam.ru/cams/web-camera-almaty-online/">
-            World-Cam
-          </a>
-          . Streams are hosted by ipcam.kz and RTSP.me. Scenic previews are
-          photographs, not live frames. Camera audio, overlays, language and
-          availability are controlled by the provider.
+          Direct HLS streams are provided by <strong>ipcam.kz</strong>. Scenic
+          previews are photographs, not live camera frames. Streams start only
+          when selected, and unavailable feeds do not redirect to other
+          websites. Provider overlays, continuous availability, and embedding
+          permissions remain the operator’s responsibility.
         </p>
         <h2>Events & travel information</h2>
         <p>

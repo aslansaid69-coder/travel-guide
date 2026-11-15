@@ -27,3 +27,11 @@ KudaFest and Sxodim Instagram links are local inspiration sources. They are not 
 - Camera provider outages are handled by source-link fallbacks. A successful HLS manifest response alone does not prove continuous playback.
 - To pause the editorial review, pause `Update Almaty guide daily` in the app. To change cloud refresh, edit `vercel.json` and deploy.
 - For a new hosting account, follow README deployment steps. Optional server-delivered email requires a verified Resend sender and host rate limiting.
+
+## Camera upgrade — stage 1, 2026-11-16
+
+The owner explicitly retained ipcam.kz and removed RTSP.me. The three remaining feeds have no World-Cam URLs or outbound-player fallbacks. Camera configuration, checks and owner actions persist in the Neon project `almaty-travel-hub` (`old-dream-49782525`). See `docs/CAMERA-AUDIT.md` for evidence.
+
+Camera monitoring uses the GitHub Actions schedule at minutes 7, 22, 37 and 52. The job authenticates with a short-lived signed GitHub OIDC token; the server checks the immutable repository/owner IDs, main branch, exact workflow, audience and event type. Logs are retained for 30 days. At most one check per 15-minute window contributes to consecutive failures. GitHub may delay or drop scheduled runs; QStash is the supplied alternative for tighter timing.
+
+The current 07:00 event refresh and 08:30 local editorial review are distinct from camera monitoring. Stage 2 will replace the data refresh with the requested 05:00 Asia/Almaty source-by-source job. Do not claim that new weather, menus, prices, payments or bookings are active before their respective stages ship.

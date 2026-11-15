@@ -1,16 +1,8 @@
 "use client";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import {
-  ArrowUpRight,
-  MapPin,
-  Play,
-  Video,
-  ChevronDown,
-  X,
-} from "lucide-react";
-import cameras from "@/data/cameras.json";
-type Camera = (typeof cameras)[number];
+import { MapPin, Play, Video, ChevronDown, X } from "lucide-react";
+import type { Camera } from "@/lib/cameras/types";
 function CameraCard({ camera }: { camera: Camera }) {
   const [active, setActive] = useState(false),
     [playing, setPlaying] = useState(false),
@@ -21,7 +13,7 @@ function CameraCard({ camera }: { camera: Camera }) {
     const element = video.current;
     let disposed = false;
     let hls: import("hls.js").default | undefined;
-    const timeout = setTimeout(() => setFailed(true), 18000);
+    let timeout = setTimeout(() => setFailed(true), 18000);
     const ready = () => {
       clearTimeout(timeout);
       setPlaying(true);
@@ -31,7 +23,17 @@ function CameraCard({ camera }: { camera: Camera }) {
       setFailed(true);
       setPlaying(false);
     };
+    const idle = () => setPlaying(false);
+    const stalled = () => {
+      setPlaying(false);
+      clearTimeout(timeout);
+      timeout = setTimeout(error, 18000);
+    };
     element.addEventListener("playing", ready);
+    for (const event of ["waiting", "stalled"])
+      element.addEventListener(event, stalled);
+    for (const event of ["pause", "ended"])
+      element.addEventListener(event, idle);
     element.addEventListener("error", error);
     async function load() {
       if (element.canPlayType("application/vnd.apple.mpegurl")) {
@@ -68,10 +70,14 @@ function CameraCard({ camera }: { camera: Camera }) {
       element.removeAttribute("src");
       element.load();
       element.removeEventListener("playing", ready);
+      for (const event of ["waiting", "stalled"])
+        element.removeEventListener(event, stalled);
+      for (const event of ["pause", "ended"])
+        element.removeEventListener(event, idle);
       element.removeEventListener("error", error);
     };
   }, [active, failed, camera.type, camera.streamUrl]);
-  const fallback = failed || camera.type === "external";
+  const fallback = failed;
   return (
     <article className="camera-card">
       <div className="camera-media">
@@ -123,21 +129,10 @@ function CameraCard({ camera }: { camera: Camera }) {
                   Live now
                 </>
               ) : (
-                "Connecting…"
+                "Connecting or buffering…"
               )}
             </span>
           </>
-        )}
-        {active && !fallback && camera.type === "iframe" && (
-          <iframe
-            src={camera.streamUrl}
-            title={`${camera.name} live webcam`}
-            loading="lazy"
-            allow="autoplay; fullscreen; encrypted-media"
-            allowFullScreen
-            referrerPolicy="strict-origin-when-cross-origin"
-            onError={() => setFailed(true)}
-          />
         )}
         {fallback && (
           <div className="camera-fallback">
@@ -147,13 +142,15 @@ function CameraCard({ camera }: { camera: Camera }) {
                 ? "This feed is taking a break."
                 : "Open the camera source"}
             </p>
-            <a
-              href={camera.sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              className="button button-accent"
+              onClick={() => {
+                setFailed(false);
+                setActive(true);
+              }}
             >
-              Watch live <ArrowUpRight size={15} />
-            </a>
+              Retry stream
+            </button>
           </div>
         )}
         {active && (
@@ -176,22 +173,39 @@ function CameraCard({ camera }: { camera: Camera }) {
           <MapPin size={13} />
           {camera.location}
         </p>
-        <a href={camera.sourceUrl} target="_blank" rel="noopener noreferrer">
+        <span className="camera-source-credit">
           Source: {camera.sourceName}
-          <ArrowUpRight size={12} />
-        </a>
-        {active && camera.type === "iframe" && (
-          <small>
-            Player availability and language are controlled by the provider.
-          </small>
-        )}
+        </span>
       </div>
     </article>
   );
 }
 export function LiveCameras() {
+  const [cameras, setCameras] = useState<Camera[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [all, setAll] = useState(false),
     [time, setTime] = useState("Almaty · UTC+5");
+  useEffect(() => {
+    let disposed = false;
+    async function refresh() {
+      try {
+        const response = await fetch("/api/cameras");
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!disposed) setCameras(data.cameras);
+      } finally {
+        if (!disposed) setLoaded(true);
+      }
+    }
+    void refresh().catch(() => {});
+    const timer = setInterval(() => {
+      void refresh().catch(() => {});
+    }, 60000);
+    return () => {
+      disposed = true;
+      clearInterval(timer);
+    };
+  }, []);
   useEffect(() => {
     const update = () =>
       setTime(
@@ -230,26 +244,33 @@ export function LiveCameras() {
             <CameraCard key={camera.id} camera={camera} />
           ))}
         </div>
+        {!cameras.length && (
+          <div className="empty-state">
+            <Video />
+            <p>
+              {loaded
+                ? "The cameras are taking a short break. Please check back soon."
+                : "Checking live views…"}
+            </p>
+          </div>
+        )}
         <div className="section-bottom">
           <p>
-            Live views courtesy of{" "}
-            <a
-              href="https://world-cam.ru/cams/web-camera-almaty-online/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              World-Cam
-            </a>
-            . Feeds may be temporarily unavailable.
+            Direct streams by ipcam.kz. The live badge appears only during video
+            playback.
           </p>
-          <button
-            className="text-button"
-            onClick={() => setAll(!all)}
-            aria-expanded={all}
-          >
-            {all ? "Show fewer cameras" : `View all ${cameras.length} cameras`}
-            <ChevronDown size={16} className={all ? "rotate-180" : ""} />
-          </button>
+          {cameras.length > 3 && (
+            <button
+              className="text-button"
+              onClick={() => setAll(!all)}
+              aria-expanded={all}
+            >
+              {all
+                ? "Show fewer cameras"
+                : `View all ${cameras.length} cameras`}
+              <ChevronDown size={16} className={all ? "rotate-180" : ""} />
+            </button>
+          )}
         </div>
       </div>
     </section>
