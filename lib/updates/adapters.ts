@@ -202,7 +202,7 @@ export function adapters(): Adapter[] {
     {
       key: "places.discovery",
       kind: "places",
-      label: "OpenStreetMap nearby discovery",
+      label: "Nearby discovery · Google / OSM",
       load: async () => {
         if (!(await settings()).discoveryEnabled)
           return {
@@ -210,29 +210,26 @@ export function adapters(): Adapter[] {
             reason: "Discovery is disabled by the owner.",
             requests: 0,
           };
+        let googleFailed = false;
+        if (process.env.GOOGLE_PLACES_API_KEY) {
+          try {
+            return success(
+              { ...(await discoverGoogle()), provider: "Google Places" },
+              "Google Place IDs discovered for review. Other Google content is fetched live, not copied into the catalog.",
+              1,
+            );
+          } catch {
+            googleFailed = true;
+          }
+        }
         return success(
-          await discoverOSM(),
-          "OSM candidates refreshed for owner review; existing approvals retained.",
-          1,
+          { ...(await discoverOSM()), provider: "OpenStreetMap" },
+          googleFailed
+            ? "Google discovery unavailable; OSM fallback refreshed candidates for review."
+            : "OSM candidates refreshed for owner review; existing approvals retained.",
+          googleFailed ? 2 : 1,
         );
       },
-    },
-    {
-      key: "places.google",
-      kind: "places",
-      label: "Google Place IDs",
-      load: async () =>
-        process.env.GOOGLE_PLACES_API_KEY
-          ? success(
-              await discoverGoogle(),
-              "Place IDs discovered; other Google details are fetched live without storage.",
-              1,
-            )
-          : {
-              status: "not_configured",
-              reason: "Google key absent; OSM discovery is active.",
-              requests: 0,
-            },
     },
     {
       key: "places.closures",

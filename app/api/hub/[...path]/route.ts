@@ -1,3 +1,4 @@
+import { drainNotifications } from "@/lib/hub/notifications";
 import { handle } from "@/lib/hub/api";
 import { HttpError } from "@/lib/hub/security";
 import { ZodError } from "zod";
@@ -9,7 +10,16 @@ async function route(
   context: { params: Promise<{ path: string[] }> },
 ) {
   try {
-    return await handle(request, (await context.params).path);
+    const path = (await context.params).path;
+    const result = await handle(request, path);
+    // Queueing is durable; a provider outage must not discard a valid request or quote.
+    if (
+      request.method === "POST" &&
+      result.ok &&
+      ["plans", "requests", "newsletter", "admin"].includes(path[0])
+    )
+      await drainNotifications().catch(() => {});
+    return result;
   } catch (error) {
     const status =
       error instanceof HttpError

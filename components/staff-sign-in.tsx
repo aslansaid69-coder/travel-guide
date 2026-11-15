@@ -18,8 +18,12 @@ export function StaffSignIn() {
         : await client.emailOtp.sendVerificationOtp({ email, type: "sign-in" });
       if (result.error)
         throw new Error(result.error.message || "Sign-in failed.");
-      if (sent) window.location.assign("/account");
-      else {
+      if (sent) {
+        const destination = await fetch("/api/hub/admin")
+          .then((r) => (r.ok ? "/admin/hub" : "/account"))
+          .catch(() => "/account");
+        window.location.assign(destination);
+      } else {
         setSent(true);
         setMessage("Check your email for a sign-in code.");
       }

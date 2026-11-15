@@ -1,4 +1,5 @@
 "use client";
+import { createAuthClient } from "@neon/auth/next";
 import { useEffect, useState } from "react";
 import { api } from "./shared";
 import { useT } from "./language";
@@ -30,6 +31,16 @@ export function Account() {
           </article>
         ))}
       </div>
+      <button
+        onClick={async () => {
+          const result = await createAuthClient().signOut();
+          if (result.error)
+            setMessage(result.error.message || "Sign out failed.");
+          else window.location.assign("/");
+        }}
+      >
+        Sign out
+      </button>
       <p className="hub-caption">
         Link a plan to your account from the itinerary editor. Plans made
         anonymously stay on your device until you save them.
