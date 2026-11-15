@@ -18,7 +18,7 @@ export function StaffSignIn() {
         : await client.emailOtp.sendVerificationOtp({ email, type: "sign-in" });
       if (result.error)
         throw new Error(result.error.message || "Sign-in failed.");
-      if (sent) window.location.assign("/admin/cameras");
+      if (sent) window.location.assign("/account");
       else {
         setSent(true);
         setMessage("Check your email for a sign-in code.");
@@ -32,7 +32,7 @@ export function StaffSignIn() {
   return (
     <form onSubmit={submit} className="contact-form staff-login">
       <label>
-        Owner email
+        Email
         <input
           type="email"
           autoComplete="email"

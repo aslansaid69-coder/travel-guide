@@ -4,6 +4,8 @@ import { XMLParser } from "fast-xml-parser";
 export type TravelEvent = {
   id: string;
   title: string;
+  titleRu?: string;
+  descriptionRu?: string;
   startDate: string;
   endDate?: string;
   dateOnly?: boolean;
@@ -84,6 +86,12 @@ export function normalizeEvent(value: unknown): TravelEvent | null {
   return {
     id: e.id as string,
     title: e.title as string,
+    ...(typeof e.titleRu === "string"
+      ? { titleRu: e.titleRu.slice(0, 300) }
+      : {}),
+    ...(typeof e.descriptionRu === "string"
+      ? { descriptionRu: e.descriptionRu.slice(0, 1000) }
+      : {}),
     place: e.place as string,
     category: e.category as string,
     description: (e.description as string)

@@ -1,4 +1,5 @@
 "use client";
+import { T, LanguageSwitch } from "@/components/hub/language";
 import { useState } from "react";
 import { MountainSnow, ArrowUpRight, Menu, X } from "lucide-react";
 export function Header() {
@@ -14,16 +15,26 @@ export function Header() {
           </span>
         </a>
         <nav className="desktop-nav" aria-label="Main navigation">
-          <a href="#live">
+          <a href="/#live">
             <span className="tiny-dot" />
-            Live Almaty
+            <T>Live Almaty</T>
           </a>
-          <a href="#events">Events</a>
-          <a href="#places">Places</a>
-          <a href="#tips">Travel tips</a>
+          <a href="/#events">
+            <T>Events</T>
+          </a>
+          <a href="/#places">
+            <T>Places</T>
+          </a>
+          <a href="/#tips">
+            <T>Travel tips</T>
+          </a>
+          <a href="/explore">
+            <T>Explore</T>
+          </a>
+          <LanguageSwitch />
         </nav>
-        <a className="nav-cta" href="#places">
-          Find your Almaty <ArrowUpRight size={17} />
+        <a className="nav-cta" href="/plan">
+          <T>Plan your trip</T> <ArrowUpRight size={17} />
         </a>
         <button
           className="menu-button"
@@ -47,11 +58,18 @@ export function Header() {
             ["places", "Places"],
             ["tips", "Travel tips"],
           ].map(([id, label]) => (
-            <a key={id} href={`#${id}`} onClick={() => setOpen(false)}>
+            <a key={id} href={`/#${id}`} onClick={() => setOpen(false)}>
               {label}
               <ArrowUpRight size={18} />
             </a>
           ))}
+          <a href="/plan" onClick={() => setOpen(false)}>
+            <T>Plan your trip</T>
+          </a>
+          <a href="/explore" onClick={() => setOpen(false)}>
+            <T>Explore</T>
+          </a>
+          <LanguageSwitch />
         </nav>
       )}
     </header>

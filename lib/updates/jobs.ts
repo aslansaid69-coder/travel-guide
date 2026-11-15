@@ -1,9 +1,17 @@
+import { autoPublish } from "@/lib/hub/publish";
 import { randomUUID } from "node:crypto";
 import { database } from "@/lib/db";
 import type { WeatherData } from "@/lib/weather/types";
 import { adapters, clothingAdapter, clothingResult } from "./adapters";
 import { runAdapters, updateRunKey } from "./engine";
-import { beginRun, finishRun, lease, release, saveResult, logBusyRun } from "./store";
+import {
+  beginRun,
+  finishRun,
+  lease,
+  release,
+  saveResult,
+  logBusyRun,
+} from "./store";
 import { drainAlerts } from "./alerts";
 export async function runUpdate(
   job: "daily" | "weather",
@@ -46,8 +54,14 @@ export async function runUpdate(
       for (const result of results.filter(
         (r) => r.status === "success" && r.key.includes(".feed."),
       )) {
-        for (const entry of result.data as { id: string }[])
-          await sql`INSERT INTO content_candidates(source_key,external_id,kind,data) VALUES(${result.key},${entry.id},${result.kind},${JSON.stringify(entry)}::jsonb) ON CONFLICT(source_key,external_id) DO UPDATE SET published_data=CASE WHEN content_candidates.status='approved' THEN COALESCE(content_candidates.published_data,content_candidates.data) ELSE content_candidates.published_data END,status=CASE WHEN content_candidates.data IS DISTINCT FROM EXCLUDED.data THEN 'pending' ELSE content_candidates.status END,data=EXCLUDED.data,updated_at=now()`;
+        const records = result.data as { id: string }[];
+        await sql`INSERT INTO content_candidates(source_key,external_id,kind,data)
+          SELECT ${result.key}, entry->>'id', ${result.kind}, entry FROM jsonb_array_elements(${JSON.stringify(records)}::jsonb) AS entry
+          ON CONFLICT(source_key,external_id) DO UPDATE SET
+          published_data=CASE WHEN content_candidates.status='approved' THEN COALESCE(content_candidates.published_data,content_candidates.data) ELSE content_candidates.published_data END,
+          status=CASE WHEN content_candidates.data IS DISTINCT FROM EXCLUDED.data THEN 'pending' ELSE content_candidates.status END,data=EXCLUDED.data,updated_at=now()`;
+        if (result.kind === "places" || result.kind === "restaurants")
+          await autoPublish(records, result.key);
       }
       const failures = results.filter((r) => r.status === "failed");
       const needs = weather?.status === "not_configured";

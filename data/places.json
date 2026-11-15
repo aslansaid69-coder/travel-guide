@@ -10,7 +10,9 @@
     "season": "Spring to autumn for walks",
     "transport": "Bus 12 toward Medeu, then explore on foot. Check current stops and closures.",
     "mapQuery": "Medeu Almaty",
-    "url": "https://www.gov.kz/org/almaty/press/news/details/1092075?lang=ru"
+    "url": "https://www.gov.kz/org/almaty/press/news/details/1092075?lang=ru",
+    "nameRu": "Медеу",
+    "descriptionRu": "Горная долина, прогулки и знаменитый высокогорный спортивный комплекс. Каток на реконструкции; перед поездкой уточните доступ."
   },
   {
     "id": "shymbulak",
@@ -23,7 +25,9 @@
     "season": "Winter for snow · summer for hiking",
     "transport": "Travel to Medeu, then take the gondola. Check lift operations before leaving.",
     "mapQuery": "Shymbulak Mountain Resort",
-    "url": "https://shymbulak.com/en/tickets/"
+    "url": "https://shymbulak.com/en/tickets/",
+    "nameRu": "Шымбулак",
+    "descriptionRu": "Поднимитесь над еловыми лесами к горным панорамам. Зимой здесь катаются на лыжах, летом гуляют и отдыхают на террасах."
   },
   {
     "id": "big-almaty-lake",
@@ -36,7 +40,9 @@
     "season": "Late spring to early autumn",
     "transport": "Arrange transport to the permitted trailhead, then hike. Vehicle access is restricted; check park rules.",
     "mapQuery": "Big Almaty Lake",
-    "url": "https://rsk.almaty.kz/en/news/43814"
+    "url": "https://rsk.almaty.kz/en/news/43814",
+    "nameRu": "Большое Алматинское озеро",
+    "descriptionRu": "Бирюзовое водохранилище среди Тянь-Шаня. Это источник питьевой воды: купание и выход к берегу запрещены. Уточните правила доступа."
   },
   {
     "id": "kok-tobe",
@@ -49,7 +55,9 @@
     "season": "Year-round · clear evenings",
     "transport": "Cable car from the lower station by Republic Palace; check operating hours.",
     "mapQuery": "Kok Tobe Cable Car Almaty",
-    "url": "https://koktobe.com/"
+    "url": "https://koktobe.com/",
+    "nameRu": "Кок-Тобе",
+    "descriptionRu": "Поднимитесь на холм ради панорамы города. Особенно красиво в ясный вечер, когда загораются городские огни."
   },
   {
     "id": "panfilov",
@@ -62,7 +70,9 @@
     "season": "Year-round · autumn colours",
     "transport": "Walk from Zhibek Zholy metro. Dress respectfully when entering the cathedral.",
     "mapQuery": "Panfilov Park Almaty",
-    "url": "https://visitalmaty.kz/"
+    "url": "https://visitalmaty.kz/",
+    "nameRu": "Парк 28 гвардейцев-панфиловцев",
+    "descriptionRu": "Тенистые аллеи, скамейки и деревянный Вознесенский собор — приятное начало прогулки по старому Алматы."
   },
   {
     "id": "green-bazaar",
@@ -75,7 +85,9 @@
     "season": "Year-round · daytime",
     "transport": "Walk north from Panfilov Park; Zhibek Zholy is the nearest central metro stop.",
     "mapQuery": "Green Bazaar Almaty",
-    "url": "https://visitalmaty.kz/"
+    "url": "https://visitalmaty.kz/",
+    "nameRu": "Зелёный базар",
+    "descriptionRu": "Сухофрукты, специи, сыры и местные продукты. Возьмите немного наличных и спрашивайте разрешение перед съёмкой."
   },
   {
     "id": "charyn",
@@ -88,6 +100,8 @@
     "season": "Spring and autumn",
     "transport": "Book a day tour or a driver. Allow a full day, bring water, and check road and trail conditions.",
     "mapQuery": "Charyn Canyon Valley of Castles",
-    "url": "https://charyn.kz/"
+    "url": "https://charyn.kz/",
+    "nameRu": "Чарынский каньон",
+    "descriptionRu": "Красные скалы и тропы Долины замков. Выделите целый день, возьмите воду и проверьте погоду и состояние дорог."
   }
 ]

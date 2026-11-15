@@ -1,3 +1,5 @@
+> Historical investigation from the initial build. Current runtime policy retains only ipcam.kz; RTSP.me and World-Cam fallback links below are historical evidence and must not be restored. Use `CAMERA-AUDIT.md` and `TRAVEL-HUB-SETUP.md` for current configuration.
+
 # Source investigation — 15 November 2026
 
 ## Live cameras

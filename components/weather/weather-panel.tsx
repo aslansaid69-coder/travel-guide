@@ -1,4 +1,5 @@
 "use client";
+import { T, useT, useLanguage } from "@/components/hub/language";
 import { useEffect, useState } from "react";
 import {
   CloudSun,
@@ -48,6 +49,8 @@ function Icon({ code, size = 20 }: { code: number; size?: number }) {
   return <Component size={size} strokeWidth={1.5} aria-hidden="true" />;
 }
 export function WeatherPanel() {
+  const t = useT();
+  const { lang } = useLanguage();
   const [view, setView] = useState<WeatherView | null>(null),
     [loaded, setLoaded] = useState(false);
   useEffect(() => {
@@ -83,7 +86,9 @@ export function WeatherPanel() {
     <aside className="weather-panel" aria-labelledby="weather-title">
       <div className="weather-panel-heading">
         <p className="eyebrow">PLAN A LITTLE, EXPLORE A LOT</p>
-        <h3 id="weather-title">Almaty, today.</h3>
+        <h3 id="weather-title">
+          <T>Almaty, today.</T>
+        </h3>
       </div>
       {!weather ? (
         <div className="weather-empty" role="status">
@@ -113,7 +118,7 @@ export function WeatherPanel() {
                 {Math.round(weather.current.temperature)}°
               </span>
               <span className="weather-unit">C</span>
-              <p>{condition(weather.current.code)}</p>
+              <p>{t(condition(weather.current.code))}</p>
             </div>
             <Icon code={weather.current.code} size={48} />
           </div>
@@ -142,11 +147,11 @@ export function WeatherPanel() {
             <div className="weather-cautions">
               <p>
                 <AlertTriangle size={15} />
-                Planning cautions
+                <T>Planning cautions</T>
               </p>
               <ul>
                 {advice.cautions.map((text) => (
-                  <li key={text}>{text}</li>
+                  <li key={text}>{t(text)}</li>
                 ))}
               </ul>
               <small>
@@ -155,14 +160,16 @@ export function WeatherPanel() {
             </div>
           ) : null}
           <div className="weather-week">
-            <h4>The next seven days</h4>
+            <h4>
+              <T>The next seven days</T>
+            </h4>
             {days.length ? (
               days.map((d) => (
                 <div key={d.date} className="weather-day">
                   <span>
                     {d.date === today
-                      ? "Today"
-                      : new Intl.DateTimeFormat("en", {
+                      ? t("Today")
+                      : new Intl.DateTimeFormat(lang, {
                           timeZone: "Asia/Almaty",
                           weekday: "short",
                         }).format(new Date(d.date + "T12:00:00+05:00"))}
@@ -203,7 +210,7 @@ export function WeatherPanel() {
             {advice?.clothing.length ? (
               <ul>
                 {advice.clothing.map((text) => (
-                  <li key={text}>{text}</li>
+                  <li key={text}>{t(text)}</li>
                 ))}
               </ul>
             ) : (
@@ -212,14 +219,16 @@ export function WeatherPanel() {
           </details>
           {advice && (
             <div className="weather-outdoor">
-              <h4>Your outdoor window</h4>
+              <h4>
+                <T>Your outdoor window</T>
+              </h4>
               {advice.outdoorWindow && (
                 <p className="weather-window">
                   {clock(advice.outdoorWindow.start)}–
                   {clock(advice.outdoorWindow.end)}
                 </p>
               )}
-              <p>{advice.outdoorHint}</p>
+              <p>{t(advice.outdoorHint)}</p>
             </div>
           )}
           <p className="weather-credit">

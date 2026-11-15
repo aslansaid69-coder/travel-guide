@@ -1,3 +1,4 @@
+import { dailyAtConfiguredHour } from "@/lib/hub/schedules";
 import { schedulerAllowed } from "@/lib/updates/scheduler";
 import { runUpdate } from "@/lib/updates/jobs";
 import { revalidatePath, revalidateTag } from "next/cache";
@@ -12,6 +13,7 @@ export async function POST(request: Request) {
       "scheduler",
       request.headers.get("x-update-trigger") === "workflow_dispatch",
     );
+    if (result.ok && !result.busy) await dailyAtConfiguredHour();
     revalidatePath("/");
     revalidateTag("events", { expire: 0 });
     return Response.json(result, {

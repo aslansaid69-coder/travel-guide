@@ -1,4 +1,5 @@
 "use client";
+import { useLanguage, T } from "@/components/hub/language";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import {
@@ -10,8 +11,37 @@ import {
   Plus,
   Minus,
 } from "lucide-react";
-import places from "@/data/places.json";
+import seedPlaces from "@/data/places.json";
 export function Places() {
+  const { lang } = useLanguage();
+  const [places, setPlaces] = useState(seedPlaces);
+  useEffect(() => {
+    fetch("/api/hub/catalog")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.items)
+          setPlaces(
+            data.items
+              .filter((i: { image: string }) => !!i.image)
+              .map((i: any) => ({
+                ...i,
+                label: i.label || i.category.toUpperCase(),
+                category:
+                  i.id === "charyn"
+                    ? "Day trips"
+                    : ["mountains", "viewpoint"].includes(i.category)
+                      ? "Mountains"
+                      : "City life",
+                season: i.season || "Check current visitor information",
+                transport:
+                  i.transport || "Open directions for the current route.",
+                url: i.sourceUrl || i.website,
+                mapQuery: i.name,
+              })),
+          );
+      })
+      .catch(() => {});
+  }, []);
   const [lastSync, setLastSync] = useState<string | null>(null);
   useEffect(() => {
     let active = true;
@@ -42,10 +72,10 @@ export function Places() {
           <div>
             <p className="eyebrow">FROM CITY STREETS TO MOUNTAIN PEAKS</p>
             <h2>
-              Find your kind <em>of wonder.</em>
+              <T ru="Найдите то, что вдохновляет.">Find your kind of wonder.</T>
             </h2>
           </div>
-          <span className="section-note">Seven places. So many stories.</span>
+          <span className="section-note">Places with a story to tell.</span>
         </div>
         <p className="source-updated">
           Owner-approved guide
@@ -98,8 +128,12 @@ export function Places() {
                 </div>
                 <div className="place-content">
                   <p className="card-category">{p.label}</p>
-                  <h3>{p.name}</h3>
-                  <p className="card-description">{p.description}</p>
+                  <h3>{lang === "ru" && p.nameRu ? p.nameRu : p.name}</h3>
+                  <p className="card-description">
+                    {lang === "ru" && p.descriptionRu
+                      ? p.descriptionRu
+                      : p.description}
+                  </p>
                   <div className="season">
                     <Sun size={15} />
                     {p.season}
@@ -145,7 +179,7 @@ export function Places() {
               onClick={() => setAll(!all)}
               aria-expanded={all}
             >
-              {all ? "Show fewer places" : "Explore all 7 places"}
+              {all ? "Show fewer places" : "Explore all places"}
               <ArrowDown size={17} className={all ? "rotate-180" : ""} />
             </button>
           </div>

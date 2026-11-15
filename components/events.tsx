@@ -1,4 +1,5 @@
 "use client";
+import { T, useLanguage, useT } from "@/components/hub/language";
 import Image from "next/image";
 import site from "@/data/site.json";
 import { useEffect, useState } from "react";
@@ -6,6 +7,8 @@ import { ArrowUpRight, CalendarDays, MapPin } from "lucide-react";
 import type { TravelEvent } from "@/lib/event-core";
 import { visibleEvents } from "@/lib/event-view";
 export function Events({ initialEvents }: { initialEvents: TravelEvent[] }) {
+  const t = useT();
+  const { lang } = useLanguage();
   const [events, setEvents] = useState(initialEvents),
     [filter, setFilter] = useState("All events");
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
@@ -44,7 +47,10 @@ export function Events({ initialEvents }: { initialEvents: TravelEvent[] }) {
           <div>
             <p className="eyebrow">GET INTO THE LOCAL RHYTHM</p>
             <h2>
-              Good days. <em>Great plans.</em>
+              <T ru="Хорошие дни.">Good days.</T>{" "}
+              <em>
+                <T ru="Большие планы.">Great plans.</T>
+              </em>
             </h2>
           </div>
           <span className="section-note">
@@ -53,7 +59,7 @@ export function Events({ initialEvents }: { initialEvents: TravelEvent[] }) {
         </div>
         <p className="source-updated">
           {lastUpdated
-            ? `Approved listings refreshed ${new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Almaty", dateStyle: "medium", timeStyle: "short" }).format(new Date(lastUpdated))} · Almaty time`
+            ? `Approved listings refreshed ${new Intl.DateTimeFormat(lang === "ru" ? "ru" : "en-GB", { timeZone: "Asia/Almaty", dateStyle: "medium", timeStyle: "short" }).format(new Date(lastUpdated))} · Almaty time`
             : "Showing verified, owner-approved listings."}
           {retained && " · Last available data retained."}
         </p>
@@ -64,11 +70,11 @@ export function Events({ initialEvents }: { initialEvents: TravelEvent[] }) {
           <div className="filter-group" role="group" aria-label="Filter events">
             {["All events", "Music", "Outdoors"].map((f) => (
               <button
-                key={f}
+                key={t(f)}
                 aria-pressed={filter === f}
                 onClick={() => setFilter(f)}
               >
-                {f}
+                {t(f)}
               </button>
             ))}
           </div>
@@ -92,12 +98,12 @@ export function Events({ initialEvents }: { initialEvents: TravelEvent[] }) {
                   />
                   <div className="date-tile">
                     <span>
-                      {new Intl.DateTimeFormat("en", {
+                      {new Intl.DateTimeFormat(lang, {
                         day: "2-digit",
                         timeZone: "Asia/Almaty",
                       }).format(date)}
                     </span>
-                    {new Intl.DateTimeFormat("en", {
+                    {new Intl.DateTimeFormat(lang, {
                       month: "short",
                       timeZone: "Asia/Almaty",
                     }).format(date)}
@@ -112,13 +118,13 @@ export function Events({ initialEvents }: { initialEvents: TravelEvent[] }) {
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      {e.title}
+                      {lang === "ru" && e.titleRu ? e.titleRu : e.title}
                       <ArrowUpRight size={20} />
                     </a>
                   </h3>
                   <p className="event-date">
                     <time dateTime={e.startDate}>
-                      {new Intl.DateTimeFormat("en-GB", {
+                      {new Intl.DateTimeFormat(lang === "ru" ? "ru" : "en-GB", {
                         dateStyle: "medium",
                         ...(e.dateOnly ? {} : { timeStyle: "short" }),
                         timeZone: "Asia/Almaty",
@@ -130,7 +136,11 @@ export function Events({ initialEvents }: { initialEvents: TravelEvent[] }) {
                     <MapPin size={13} />
                     {e.place}
                   </p>
-                  <p className="card-description">{e.description}</p>
+                  <p className="card-description">
+                    {lang === "ru" && e.descriptionRu
+                      ? e.descriptionRu
+                      : e.description}
+                  </p>
                   <a
                     className="source-link"
                     href={e.sourceUrl}

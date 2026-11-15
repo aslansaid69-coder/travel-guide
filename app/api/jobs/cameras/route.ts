@@ -1,3 +1,4 @@
+import { automationTick } from "@/lib/hub/notifications";
 import { Receiver } from "@upstash/qstash";
 import { timingSafeEqual } from "node:crypto";
 import { githubScheduleToken } from "@/lib/cameras/scheduler-auth";
@@ -36,7 +37,14 @@ export async function POST(request: Request) {
   if (!authorised)
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   try {
-    return Response.json({ ok: true, ...(await checkCameras("scheduler")) });
+    const cameras = await checkCameras("scheduler");
+    let automation;
+    try {
+      automation = await automationTick();
+    } catch {
+      automation = { failed: true };
+    }
+    return Response.json({ ok: true, ...cameras, automation });
   } catch {
     return Response.json(
       { error: "Camera job failed. Check the owner log." },

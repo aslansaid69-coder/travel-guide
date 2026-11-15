@@ -1,3 +1,7 @@
+# Almaty, with love — travel hub
+
+The existing guide now includes an approved catalog/map, restaurants/menus, itinerary builder, share/PDF, package booking requests, inventory, quotes/payments integration, staff dashboard and owner insights. Start with [Travel hub setup](docs/TRAVEL-HUB-SETUP.md) for credentials, role assignment, source permissions, booking workflow, deployment and testing. Existing camera/weather operations continue below.
+
 # Almaty, with love
 
 A responsive English travel guide built with **Next.js 16, React 19, TypeScript, and Tailwind CSS 4**. Includes real Tian Shan photography, click-to-load live webcams, attributed event listings, seven places, travel tips, and an email contact form.

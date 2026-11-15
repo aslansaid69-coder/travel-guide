@@ -1,4 +1,4 @@
-# Travel hub upgrade — architecture and stage gates
+# Travel hub upgrade — architecture and delivery
 
 Inspected 2026-11-16 before implementation. Keep the mountain-blue / cream / orange design and the existing application.
 
@@ -20,7 +20,9 @@ Next.js 16.4.6 App Router, React 19.3.1, TypeScript, Tailwind CSS 4.3.5, hls.js 
 - **Messages:** durable notification outbox for owner alerts, quote links, reminders and reviews; provider delivery IDs and retries. Resend for email, optional SMS/WhatsApp provider, Telegram Bot API for staff. Do not call a mailto draft automatic delivery.
 - **Analytics/privacy:** first-party event aggregates, consent-aware optional analytics, no raw itinerary contact information in public analytics, retention policies and CSV export scoped by role. Cookie banner reflects actual optional cookies. PWA caching excludes admin, auth, API responses with private information, and checkout.
 
-## Stage delivery and confirmation
+## Stage delivery
+
+On 16 November 2026 the owner approved completing the remaining stages together, replacing the earlier per-stage pause requirement. The stage table below records the original sequence; current configuration and verification are documented in `TRAVEL-HUB-SETUP.md`.
 
 | Stage | Concrete deliverable and verification                                                                                                                                |
 | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

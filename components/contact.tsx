@@ -1,9 +1,11 @@
 "use client";
+import { T, useT } from "@/components/hub/language";
 import { useState, type FormEvent } from "react";
 import { ArrowUpRight, Check } from "lucide-react";
 import site from "@/data/site.json";
 import { createEmailDraft } from "@/lib/contact";
 export function Contact() {
+  const t = useT();
   const [state, setState] = useState<
       "idle" | "sending" | "sent" | "error" | "draft"
     >("idle"),
@@ -64,7 +66,7 @@ export function Contact() {
     >
       <div className="form-row">
         <label>
-          Your name
+          <T ru="Ваше имя">Your name</T>
           <input
             autoComplete="name"
             name="name"
@@ -75,7 +77,7 @@ export function Contact() {
           />
         </label>
         <label>
-          Email address
+          <T ru="Электронная почта">Email address</T>
           <input
             autoComplete="email"
             name="email"
@@ -87,7 +89,9 @@ export function Contact() {
         </label>
       </div>
       <label>
-        A question, a tip, a little hello
+        <T ru="Вопрос, совет или просто приветствие">
+          A question, a tip, a little hello
+        </T>
         <textarea
           name="message"
           required
@@ -106,7 +110,7 @@ export function Contact() {
       <div className="form-bottom">
         <span>
           {emailApp
-            ? "Prepare a draft in your own email app."
+            ? t("Prepare a draft in your own email app.")
             : "We’ll only use your email to reply."}
         </span>
         <button
@@ -117,18 +121,18 @@ export function Contact() {
           {state === "sending"
             ? "Sending…"
             : emailApp
-              ? "Prepare email"
+              ? t("Prepare email")
               : "Send a little hello"}
           {state === "sent" ? <Check size={17} /> : <ArrowUpRight size={17} />}
         </button>
       </div>
       <p className={`form-status ${state}`} role="status" aria-live="polite">
-        {message}
+        {t(message)}
       </p>
       {draft && (
         <div className="email-draft">
           <a className="button button-outline" href={draft}>
-            Open email draft
+            <T ru="Открыть черновик письма">Open email draft</T>
             <ArrowUpRight size={16} />
           </a>
           <span>

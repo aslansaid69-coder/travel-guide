@@ -12,13 +12,15 @@
     "imageLabel": "Almaty city scenery",
     "sourceName": "Almaty Marathon",
     "sourceUrl": "https://almaty-marathon.kz/en/events/city__run_2026/",
-    "verifiedAt": "2026-11-15"
+    "verifiedAt": "2026-11-15",
+    "titleRu": "City Run Алматы",
+    "descriptionRu": "Городской старт для бегунов и любителей скандинавской ходьбы: дистанции 10 км и 5 км."
   },
   {
     "id": "moldanazar-2026",
     "title": "An evening with Moldanazar",
     "startDate": "2026-11-28T20:00:00+05:00",
-    "place": "Republic Palace \u00b7 56 Dostyk Avenue",
+    "place": "Republic Palace · 56 Dostyk Avenue",
     "category": "Music",
     "description": "Discover the sound of contemporary Kazakhstan at a live show by the Kazakh indie-pop band.",
     "image": "/images/kok-tobe.jpg",
@@ -26,7 +28,9 @@
     "imageLabel": "Almaty city scenery",
     "sourceName": "Ticketon",
     "sourceUrl": "https://ticketon.kz/concerts/event/tckt2-kontsert-gruppy-moldanazar-v-almaty",
-    "verifiedAt": "2026-11-15"
+    "verifiedAt": "2026-11-15",
+    "titleRu": "Вечер с Moldanazar",
+    "descriptionRu": "Познакомьтесь с современным звучанием Казахстана на выступлении казахстанской инди-поп-группы."
   },
   {
     "id": "level-up-2026",
@@ -40,6 +44,8 @@
     "imageLabel": "Almaty local life",
     "sourceName": "Ticketon",
     "sourceUrl": "https://ticketon.kz/en/concerts/event/level-up-festival",
-    "verifiedAt": "2026-11-15"
+    "verifiedAt": "2026-11-15",
+    "titleRu": "Фестиваль LEVEL UP",
+    "descriptionRu": "Вечерний фестиваль на Алматы Арене. Состав участников и наличие билетов уточняйте у организатора."
   }
 ]

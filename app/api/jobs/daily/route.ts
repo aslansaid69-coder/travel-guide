@@ -1,3 +1,4 @@
+import { settings } from "@/lib/hub/store";
 import { schedulerAllowed } from "@/lib/updates/scheduler";
 import { runUpdate } from "@/lib/updates/jobs";
 import { revalidatePath, revalidateTag } from "next/cache";
@@ -7,6 +8,21 @@ export async function POST(request: Request) {
   if (!(await schedulerAllowed(request, "daily")))
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   try {
+    const manual =
+      request.headers.get("x-update-trigger") === "workflow_dispatch";
+    const hour = Number(
+      new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Asia/Almaty",
+        hour: "2-digit",
+        hourCycle: "h23",
+      }).format(new Date()),
+    );
+    if (!manual && hour < (await settings()).dailyHour)
+      return Response.json({
+        ok: true,
+        skipped: true,
+        reason: "Waiting for the owner-configured daily hour.",
+      });
     const result = await runUpdate(
       "daily",
       "scheduler",

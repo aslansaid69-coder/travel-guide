@@ -1,4 +1,5 @@
 "use client";
+import { T } from "@/components/hub/language";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { MapPin, Play, Video, ChevronDown, X } from "lucide-react";
@@ -229,7 +230,10 @@ export function LiveCameras() {
               <span className="tiny-dot" /> A WINDOW INTO THE CITY
             </p>
             <h2>
-              A little closer. <em>Right now.</em>
+              <T ru="Чуть ближе.">A little closer.</T>{" "}
+              <em>
+                <T ru="Прямо сейчас.">Right now.</T>
+              </em>
             </h2>
           </div>
           <div className="live-clock">
@@ -238,7 +242,10 @@ export function LiveCameras() {
           </div>
         </div>
         <p className="section-intro">
-          A mountain morning. A change in the clouds. See Almaty as it happens.
+          <T ru="Горное утро. Плывущие облака. Посмотрите на Алматы в прямом эфире.">
+            A mountain morning. A change in the clouds. See Almaty as it
+            happens.
+          </T>
         </p>
         <div className="live-hub-grid">
           <div className="live-camera-column">

@@ -1,3 +1,5 @@
+"use client";
+import { useT, T } from "@/components/hub/language";
 import {
   ArrowUpRight,
   Plus,
@@ -61,15 +63,18 @@ const tips = [
   },
 ];
 export function Tips() {
+  const t = useT();
   return (
     <section id="tips" className="section tips-section">
       <div className="shell tips-layout">
         <div className="tips-heading">
           <p className="eyebrow">A LITTLE KNOW-HOW GOES A LONG WAY</p>
           <h2>
-            Arrive curious.
+            <T ru="Приезжайте с любопытством.">Arrive curious.</T>
             <br />
-            <em>Feel at home.</em>
+            <em>
+              <T ru="Почувствуйте себя дома.">Feel at home.</T>
+            </em>
           </h2>
           <p>
             From your first tenge to your first mountain trail, a few useful
@@ -85,17 +90,17 @@ export function Tips() {
         </div>
         <div className="tips-list">
           {tips.map((tip, i) => (
-            <details key={tip.title} className="tip">
+            <details key={t(tip.title)} className="tip">
               <summary>
                 <tip.icon size={21} strokeWidth={1.5} />
-                <span>{tip.title}</span>
+                <span>{t(tip.title)}</span>
                 <span className="tip-number">0{i + 1}</span>
                 <Plus className="tip-plus" size={18} />
               </summary>
               <div className="tip-body">
-                <p>{tip.text}</p>
+                <p>{t(tip.text)}</p>
                 <a href={tip.url} target="_blank" rel="noopener noreferrer">
-                  {tip.source}
+                  {t(tip.source)}
                   <ArrowUpRight size={13} />
                 </a>
               </div>

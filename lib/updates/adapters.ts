@@ -1,3 +1,12 @@
+import { translateCandidates } from "@/lib/hub/translations";
+import { catalog, settings } from "@/lib/hub/store";
+import {
+  discoverOSM,
+  discoverGoogle,
+  exchangeRates,
+  closureScan,
+} from "@/lib/hub/discovery";
+import { readSnapshot } from "./store";
 import { boundedBody } from "./body";
 import { createHash } from "node:crypto";
 import seedEvents from "@/data/events.json";
@@ -91,7 +100,7 @@ export function adapters(): Adapter[] {
       label: "Owner-approved places",
       load: async () =>
         success(
-          seedPlaces,
+          await catalog(),
           "Approved local guide imported; this does not re-verify external opening hours or prices.",
         ),
     },
@@ -171,7 +180,128 @@ export function adapters(): Adapter[] {
         }),
       });
   }
-  return [weather, ...curated, ...events, ...external];
+  const hub: Adapter[] = [
+    {
+      key: "places.translations",
+      kind: "places",
+      label: "AI-assisted Russian drafts",
+      load: async () =>
+        process.env.TRANSLATION_AI_KEY
+          ? success(
+              await translateCandidates(),
+              "Russian translations saved as pending drafts for owner review.",
+              3,
+            )
+          : {
+              status: "not_configured",
+              reason:
+                "Optional translation provider is not configured; owner translations remain available.",
+              requests: 0,
+            },
+    },
+    {
+      key: "places.discovery",
+      kind: "places",
+      label: "OpenStreetMap nearby discovery",
+      load: async () => {
+        if (!(await settings()).discoveryEnabled)
+          return {
+            status: "not_configured",
+            reason: "Discovery is disabled by the owner.",
+            requests: 0,
+          };
+        return success(
+          await discoverOSM(),
+          "OSM candidates refreshed for owner review; existing approvals retained.",
+          1,
+        );
+      },
+    },
+    {
+      key: "places.google",
+      kind: "places",
+      label: "Google Place IDs",
+      load: async () =>
+        process.env.GOOGLE_PLACES_API_KEY
+          ? success(
+              await discoverGoogle(),
+              "Place IDs discovered; other Google details are fetched live without storage.",
+              1,
+            )
+          : {
+              status: "not_configured",
+              reason: "Google key absent; OSM discovery is active.",
+              requests: 0,
+            },
+    },
+    {
+      key: "places.closures",
+      kind: "places",
+      label: "Weekly OSM closure scan",
+      load: async () => {
+        const previous = await readSnapshot<{
+          lastCheckedAt: string;
+          checked: number;
+          flagged: number;
+        }>("places.closures");
+        if (
+          previous?.data &&
+          Date.now() - new Date(previous.data.lastCheckedAt).valueOf() <
+            7 * 86400000
+        )
+          return success(
+            previous.data,
+            "Weekly closure scan is not due; previous result retained.",
+          );
+        return success(
+          { ...(await closureScan()), lastCheckedAt: new Date().toISOString() },
+          "Confirmed OSM closure tags checked; missing listings are not treated as closed.",
+          1,
+        );
+      },
+    },
+    {
+      key: "restaurants.approved",
+      kind: "restaurants",
+      label: "Approved restaurants",
+      load: async () =>
+        success(
+          (await catalog()).filter((i) =>
+            ["restaurant", "cafe"].includes(i.category),
+          ),
+          "Approved restaurant records retained; external details need a permitted partner feed.",
+        ),
+    },
+    {
+      key: "menus.approved",
+      kind: "menus",
+      label: "Owner/partner approved menus",
+      load: async () =>
+        success(
+          (await catalog())
+            .filter((i) => i.menu.length)
+            .map((i) => ({
+              id: i.id,
+              items: i.menu,
+              currency: i.menuCurrency,
+              updatedAt: i.menuUpdatedAt,
+            })),
+          "Approved menus retained with original price dates; no unverified menu price changes.",
+        ),
+    },
+    {
+      key: "prices.exchange",
+      kind: "prices",
+      label: "National Bank of Kazakhstan exchange rates",
+      load: async () =>
+        success(
+          await exchangeRates(),
+          "Official exchange rates refreshed for indicative conversions.",
+          1,
+        ),
+    },
+  ];
+  return [weather, ...curated, ...events, ...external, ...hub];
 }
 export const clothingAdapter: Pick<Adapter, "key" | "kind" | "label"> = {
   key: "clothing.rules",

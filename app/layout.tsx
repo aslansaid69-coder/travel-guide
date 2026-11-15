@@ -2,6 +2,11 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { siteUrl } from "@/lib/site";
 import "./globals.css";
+import "leaflet/dist/leaflet.css";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+import { LanguageProvider } from "@/components/hub/language";
+import { Consent } from "@/components/hub/shared";
 const inter = localFont({
   src: [
     {
@@ -77,7 +82,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <a href="#main" className="skip-link">
           Skip to content
         </a>
-        {children}
+        <LanguageProvider>
+          {children}
+          <Consent />
+        </LanguageProvider>
       </body>
     </html>
   );

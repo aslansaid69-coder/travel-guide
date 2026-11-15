@@ -1,16 +1,16 @@
 import { StaffSignIn } from "@/components/staff-sign-in";
 export const metadata = {
-  title: "Owner sign-in",
+  title: "Sign in",
   robots: { index: false, follow: false },
 };
 export default function SignIn() {
   return (
     <main className="shell credits-page">
-      <p className="eyebrow">ALMATY · OWNER WORKSPACE</p>
+      <p className="eyebrow">ALMATY · YOUR ACCOUNT</p>
       <h1>Welcome back.</h1>
-      <p>Use your approved owner email to receive a secure sign-in code.</p>
+      <p>Use your email to receive a secure sign-in code. Staff permissions are assigned by the owner.</p>
       <StaffSignIn />
-      <a href="/">Return to the guide</a>
+      <a href="/">Return to the guide</a> · <a href="/admin/hub">Open staff workspace</a>
     </main>
   );
 }

@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 const config: NextConfig = {
   poweredByHeader: false,
+  outputFileTracingIncludes: {
+    "/api/hub/[[...path]]": ["./assets/fonts/**/*"],
+    "/api/hub/[...path]": ["./assets/fonts/**/*"],
+  },
   async headers() {
     const cameraHosts = [
       "ipcam.kz",
