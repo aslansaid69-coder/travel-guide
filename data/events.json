@@ -1,0 +1,45 @@
+[
+  {
+    "id": "city-run-2026",
+    "title": "City Run Almaty",
+    "startDate": "2026-11-15",
+    "dateOnly": true,
+    "place": "Astana Square",
+    "category": "Outdoors",
+    "description": "A city-centre gathering for runners and Nordic walkers, with a 10 km run and a 5 km walking route.",
+    "image": "/images/panfilov.jpg",
+    "imageAlt": "Almaty city scenery; editorial image, not an event photograph",
+    "imageLabel": "Almaty city scenery",
+    "sourceName": "Almaty Marathon",
+    "sourceUrl": "https://almaty-marathon.kz/en/events/city__run_2026/",
+    "verifiedAt": "2026-11-15"
+  },
+  {
+    "id": "moldanazar-2026",
+    "title": "An evening with Moldanazar",
+    "startDate": "2026-11-28T20:00:00+05:00",
+    "place": "Republic Palace \u00b7 56 Dostyk Avenue",
+    "category": "Music",
+    "description": "Discover the sound of contemporary Kazakhstan at a live show by the Kazakh indie-pop band.",
+    "image": "/images/kok-tobe.jpg",
+    "imageAlt": "A view over Almaty; editorial city image, not a concert photograph",
+    "imageLabel": "Almaty city scenery",
+    "sourceName": "Ticketon",
+    "sourceUrl": "https://ticketon.kz/concerts/event/tckt2-kontsert-gruppy-moldanazar-v-almaty",
+    "verifiedAt": "2026-11-15"
+  },
+  {
+    "id": "level-up-2026",
+    "title": "LEVEL UP Festival",
+    "startDate": "2026-12-13T17:00:00+05:00",
+    "place": "Almaty Arena",
+    "category": "Music",
+    "description": "An evening festival at Almaty Arena. Check the original listing for the latest line-up and ticket availability.",
+    "image": "/images/bazaar.jpg",
+    "imageAlt": "Almaty local life; editorial city image, not a festival photograph",
+    "imageLabel": "Almaty local life",
+    "sourceName": "Ticketon",
+    "sourceUrl": "https://ticketon.kz/en/concerts/event/level-up-festival",
+    "verifiedAt": "2026-11-15"
+  }
+]

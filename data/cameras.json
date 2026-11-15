@@ -1,0 +1,68 @@
+[
+  {
+    "id": "shymbulak-base",
+    "name": "Shymbulak \u00b7 mountain view",
+    "location": "Shymbulak resort, Ile-Alatau",
+    "type": "hls",
+    "streamUrl": "https://ipcam.kz/cam5/index.m3u8",
+    "sourceUrl": "https://world-cam.ru/cams/web-camera-almaty-online/ski-resort-shymbulak/",
+    "sourceName": "World-Cam \u00b7 ipcam.kz",
+    "poster": "/images/shymbulak.jpg",
+    "posterAlt": "Scenic view of Shymbulak, not a live camera frame",
+    "verifiedAt": "2026-11-15",
+    "note": "Public HLS manifest returned 200 with Access-Control-Allow-Origin: *. Confirm continued redistribution permission with the operator."
+  },
+  {
+    "id": "medeu",
+    "name": "Medeu \u00b7 the mountain arena",
+    "location": "Medeu Valley, southeast Almaty",
+    "type": "external",
+    "streamUrl": "",
+    "sourceUrl": "https://world-cam.ru/cams/web-camera-almaty-online/skating-rink-medeo/",
+    "sourceName": "World-Cam \u00b7 RTSP.me",
+    "poster": "/images/medeu.jpg",
+    "posterAlt": "Scenic photograph of Medeu, not a live camera frame",
+    "verifiedAt": "2026-11-15",
+    "note": "World-Cam publishes https://rtsp.me/embed/bFDa3RAb. The embed loads but browser verification on 2026-11-15 shows provider access temporarily restricted. External fallback until operator restores it. Rink under reconstruction.",
+    "discoveredEmbedUrl": "https://rtsp.me/embed/bFDa3RAb"
+  },
+  {
+    "id": "shymbulak-upper",
+    "name": "Shymbulak \u00b7 alpine outlook",
+    "location": "Shymbulak resort, Ile-Alatau",
+    "type": "hls",
+    "streamUrl": "https://ipcam.kz/cam6/index.m3u8",
+    "sourceUrl": "https://world-cam.ru/cams/web-camera-almaty-online/chimbulak-ski-resort-ss/",
+    "sourceName": "World-Cam \u00b7 ipcam.kz",
+    "poster": "/images/hero.jpg",
+    "posterAlt": "Tian Shan mountain landscape, not a live camera frame",
+    "verifiedAt": "2026-11-15",
+    "note": "Public HLS manifest returned 200 with CORS enabled. Camera position is not precisely specified by the source."
+  },
+  {
+    "id": "shymbulak-panorama",
+    "name": "Shymbulak \u00b7 resort panorama",
+    "location": "Shymbulak resort, Ile-Alatau",
+    "type": "hls",
+    "streamUrl": "https://ipcam.kz/cam1/index.m3u8",
+    "sourceUrl": "https://world-cam.ru/cams/web-camera-almaty-online/chimbulak-ski-resort/",
+    "sourceName": "World-Cam \u00b7 ipcam.kz",
+    "poster": "/images/shymbulak.jpg",
+    "posterAlt": "Shymbulak scenic photograph, not a live camera frame",
+    "verifiedAt": "2026-11-15",
+    "note": "Public HLS manifest returned 200 with CORS enabled."
+  },
+  {
+    "id": "shymbulak-archive",
+    "name": "Shymbulak \u00b7 alternate view",
+    "location": "Shymbulak resort, Ile-Alatau",
+    "type": "external",
+    "streamUrl": "",
+    "sourceUrl": "https://world-cam.ru/cams/web-camera-almaty-online/chimbulak-ski-resort-/",
+    "sourceName": "World-Cam",
+    "poster": "/images/shymbulak.jpg",
+    "posterAlt": "Scenic view of Shymbulak, not a live camera frame",
+    "verifiedAt": "2026-11-15",
+    "note": "Original https://ipcam.kz/cam2/index.m3u8 returned HTTP 404. Open the source for its latest availability."
+  }
+]

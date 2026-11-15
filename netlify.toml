@@ -1,0 +1,7 @@
+[build]
+command = "npm run build"
+publish = ".next"
+[build.environment]
+NODE_VERSION = "22"
+# Netlify automatically provisions its Next.js adapter. Daily ISR works on demand.
+# For a timed refresh, call /api/cron/events from an external scheduler with CRON_SECRET.

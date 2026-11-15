@@ -1,0 +1,36 @@
+{
+  "name": "almaty-travel-guide",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build --webpack",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "events:refresh": "node --import tsx scripts/refresh-events.ts"
+  },
+  "dependencies": {
+    "next": "16.4.6",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "hls.js": "1.7.4",
+    "fast-xml-parser": "5.12.1",
+    "lucide-react": "^0.468.0",
+    "@fontsource/inter": "^5.2.5",
+    "@fontsource/dm-serif-display": "^5.2.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tailwindcss": "4.3.5",
+    "@tailwindcss/postcss": "4.3.5",
+    "tsx": "^4.20.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "type": "module"
+}

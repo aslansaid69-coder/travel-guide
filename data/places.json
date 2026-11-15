@@ -1,0 +1,93 @@
+[
+  {
+    "id": "medeu",
+    "name": "Medeu",
+    "label": "HIGH ABOVE THE EVERYDAY",
+    "category": "Mountains",
+    "image": "/images/medeu.jpg",
+    "alt": "Medeu mountain sports complex surrounded by the Ile-Alatau mountains",
+    "description": "Follow the valley into the mountains for crisp air, forest walks, and the famous high-altitude arena. The rink is under reconstruction; check access before going.",
+    "season": "Spring to autumn for walks",
+    "transport": "Bus 12 toward Medeu, then explore on foot. Check current stops and closures.",
+    "mapQuery": "Medeu Almaty",
+    "url": "https://www.gov.kz/org/almaty/press/news/details/1092075?lang=ru"
+  },
+  {
+    "id": "shymbulak",
+    "name": "Shymbulak",
+    "label": "YOUR ALPINE ESCAPE",
+    "category": "Mountains",
+    "image": "/images/shymbulak.jpg",
+    "alt": "Alpine landscape at Shymbulak mountain resort",
+    "description": "Ride above the spruce forests to wide-open mountain views. Snowy slopes in winter give way to alpine walks and terrace lunches in summer.",
+    "season": "Winter for snow · summer for hiking",
+    "transport": "Travel to Medeu, then take the gondola. Check lift operations before leaving.",
+    "mapQuery": "Shymbulak Mountain Resort",
+    "url": "https://shymbulak.com/en/tickets/"
+  },
+  {
+    "id": "big-almaty-lake",
+    "name": "Big Almaty Lake",
+    "label": "A DIFFERENT SHADE OF BLUE",
+    "category": "Mountains",
+    "image": "/images/lake.jpg",
+    "alt": "Turquoise Big Almaty Lake beneath high mountain peaks",
+    "description": "A remarkable turquoise reservoir framed by the Tian Shan. Enjoy the viewpoints and protect this drinking-water source: no swimming or shoreline access.",
+    "season": "Late spring to early autumn",
+    "transport": "Arrange transport to the permitted trailhead, then hike. Vehicle access is restricted; check park rules.",
+    "mapQuery": "Big Almaty Lake",
+    "url": "https://rsk.almaty.kz/en/news/43814"
+  },
+  {
+    "id": "kok-tobe",
+    "name": "Kok-Tobe",
+    "label": "THE CITY AT YOUR FEET",
+    "category": "City life",
+    "image": "/images/kok-tobe.jpg",
+    "alt": "View of Almaty from the Kok-Tobe hillside",
+    "description": "Take the scenic route to a hilltop panorama. Come as the afternoon softens, then watch the city lights spread beneath the mountains.",
+    "season": "Year-round · clear evenings",
+    "transport": "Cable car from the lower station by Republic Palace; check operating hours.",
+    "mapQuery": "Kok Tobe Cable Car Almaty",
+    "url": "https://koktobe.com/"
+  },
+  {
+    "id": "panfilov",
+    "name": "Panfilov Park",
+    "label": "SLOW DOWN IN THE CITY",
+    "category": "City life",
+    "image": "/images/panfilov.jpg",
+    "alt": "The colourful Ascension Cathedral in Almaty's Panfilov Park",
+    "description": "Tree-lined paths, quiet benches, and the colourful wooden Ascension Cathedral make this a lovely place to begin a walk through old Almaty.",
+    "season": "Year-round · autumn colours",
+    "transport": "Walk from Zhibek Zholy metro. Dress respectfully when entering the cathedral.",
+    "mapQuery": "Panfilov Park Almaty",
+    "url": "https://visitalmaty.kz/"
+  },
+  {
+    "id": "green-bazaar",
+    "name": "Green Bazaar",
+    "label": "A TASTE OF LOCAL LIFE",
+    "category": "City life",
+    "image": "/images/bazaar.jpg",
+    "alt": "Market stalls inside Almaty's Green Bazaar",
+    "description": "Wander between dried fruit, spices, cheeses, and local produce. Bring a little cash, ask before taking photos, and leave room for a taste.",
+    "season": "Year-round · daytime",
+    "transport": "Walk north from Panfilov Park; Zhibek Zholy is the nearest central metro stop.",
+    "mapQuery": "Green Bazaar Almaty",
+    "url": "https://visitalmaty.kz/"
+  },
+  {
+    "id": "charyn",
+    "name": "Charyn Canyon",
+    "label": "MAKE A DAY OF IT",
+    "category": "Day trips",
+    "image": "/images/charyn.jpg",
+    "alt": "Red sandstone cliffs in Charyn Canyon's Valley of Castles",
+    "description": "A landscape of sculpted red cliffs and winding trails. The Valley of Castles makes an unforgettable escape from the city.",
+    "season": "Spring and autumn",
+    "transport": "Book a day tour or a driver. Allow a full day, bring water, and check road and trail conditions.",
+    "mapQuery": "Charyn Canyon Valley of Castles",
+    "url": "https://charyn.kz/"
+  }
+]
