@@ -1,6 +1,16 @@
 {
   "name": "Almaty, with love",
   "description": "A thoughtful travel guide to Almaty, Kazakhstan. Live mountain webcams, local events, memorable places, and practical tips for your first visit.",
-  "instagramUrl": "",
-  "facebookUrl": ""
+  "contactMode": "email-app",
+  "contactEmail": "aslansaid69@gmail.com",
+  "localSources": [
+    {
+      "name": "KudaFest",
+      "url": "https://www.instagram.com/kudafest/"
+    },
+    {
+      "name": "Sxodim",
+      "url": "https://www.instagram.com/sxodim/"
+    }
+  ]
 }

@@ -1,5 +1,6 @@
 "use client";
 import Image from "next/image";
+import site from "@/data/site.json";
 import { useEffect, useState } from "react";
 import { ArrowUpRight, CalendarDays, MapPin } from "lucide-react";
 import type { TravelEvent } from "@/lib/event-core";
@@ -159,6 +160,18 @@ export function Events({ initialEvents }: { initialEvents: TravelEvent[] }) {
             <ArrowUpRight size={16} />
           </a>
         </div>
+        <p className="local-sources">
+          More local inspiration:{" "}
+          {site.localSources.map((source, index) => (
+            <span key={source.name}>
+              {index > 0 && " · "}
+              <a href={source.url} target="_blank" rel="noopener noreferrer">
+                {source.name} on Instagram
+              </a>
+            </span>
+          ))}
+          . These are independent local sources.
+        </p>
       </div>
     </section>
   );

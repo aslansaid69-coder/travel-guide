@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { validateContact } from "../lib/contact";
+import { validateContact, createEmailDraft } from "../lib/contact";
 import { POST } from "../app/api/contact/route";
 const valid = {
   name: "Alex Visitor",
@@ -71,4 +71,22 @@ test("public Host is respected when Next.js exposes an internal request URL", as
     body: JSON.stringify({ ...valid, website: "honeypot" }),
   });
   assert.equal((await POST(request)).status, 200);
+});
+
+test("email-app draft safely encodes message and never claims to send", () => {
+  const href = createEmailDraft("owner@example.com", {
+    ...valid,
+    name: "Alex & Sam",
+    message: "Hello! A question about tea & mountains?",
+  });
+  assert.ok(href);
+  const url = new URL(href);
+  assert.equal(url.protocol, "mailto:");
+  assert.equal(url.pathname, "owner@example.com");
+  assert.equal(
+    url.searchParams.get("subject"),
+    "Almaty guide: a hello from Alex & Sam",
+  );
+  assert.match(url.searchParams.get("body")!, /tea & mountains\?/);
+  assert.equal(createEmailDraft("bad-address", valid), null);
 });

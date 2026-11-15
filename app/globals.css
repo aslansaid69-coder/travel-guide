@@ -1594,3 +1594,37 @@ textarea:focus-visible {
     transition: none !important;
   }
 }
+
+.local-sources {
+  margin-top: 18px;
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.local-sources a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.email-draft {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.email-draft > span {
+  font-size: 11px;
+}
+.email-draft > span a {
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+.footer-socials {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+@media (max-width: 600px) {
+  .footer-socials {
+    justify-content: flex-start;
+  }
+}

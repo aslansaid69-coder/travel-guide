@@ -20,14 +20,20 @@ npm run build
 npm start
 ```
 
-Fonts and photos are served locally. No Google Fonts request, remote image key, or webcam API key is required. The site works with curated events before any feed is configured. Contact delivery requires the variables below; it never pretends to send a message when they are absent.
+Fonts and photos are served locally. No Google Fonts request, remote image key, or webcam API key is required. The site works with curated events before any feed is configured. Contact is configured as an email-app draft form addressed to the owner’s approved Gmail address; no email API key is needed. Visitors review and send the draft in their own email app. Optional server delivery remains available for a future Resend setup.
+
+## Current deployment
+
+Live: https://almaty-travel-guide.vercel.app
+
+The Vercel project is connected to GitHub `main`; pushes trigger production builds. The production domain and daily-refresh secret are already configured. The cloud event-cache refresh runs daily in the 07:00–07:59 Asia/Almaty window. A separate Codex daily content review is active at 08:30 Asia/Almaty and requires the computer and desktop app to be running. See [operations](docs/OPERATIONS.md).
 
 ## Deploy to Vercel
 
 1. Import `aslansaid69-coder/travel-guide` into Vercel. Select Next.js and Node 22. Repository root is the project root.
 2. Set `NEXT_PUBLIC_SITE_URL` to the final HTTPS domain. This controls canonical URLs, Open Graph URLs, robots.txt and sitemap.xml. Redeploy after changing it.
 3. Add a strong `CRON_SECRET` (for example, generate one using `openssl rand -hex 32`).
-4. Add email credentials if you want the contact form to deliver messages.
+4. The default email-app form needs no credentials. Only add Resend credentials if switching `data/site.json` contactMode to `server`.
 5. Deploy. `vercel.json` schedules `/api/cron/events` daily at **02:00 UTC / 07:00 Almaty**. Vercel sends the secret in an Authorization Bearer header. The linked Hobby plan runs this once daily within the 07:00–07:59 Almaty window.
 
 ## Deploy to Netlify
@@ -41,15 +47,15 @@ On-demand daily revalidation works on both hosts. Vercel's cron configuration is
 | Setting                   | Purpose                                                                                           |
 | ------------------------- | ------------------------------------------------------------------------------------------------- |
 | `NEXT_PUBLIC_SITE_URL`    | Your deployed canonical HTTPS URL. Default is localhost for development.                          |
-| `RESEND_API_KEY`          | Server-only Resend email key; needed for contact delivery.                                        |
+| `RESEND_API_KEY`          | Optional server-only Resend email key; unused by email-app mode.                                  |
 | `CONTACT_FROM`            | Sender on a domain verified in your Resend account.                                               |
 | `CONTACT_TO`              | Your inbox receiving contact submissions.                                                         |
 | `CRON_SECRET`             | Protects daily cache refresh; endpoint denies access when unset.                                  |
-| `data/site.json`          | Your own Instagram/Facebook URLs; empty values hide links rather than invent accounts.            |
+| `data/site.json`          | Approved contact address and third-party local source links (KudaFest and Sxodim).                |
 | `data/event-sources.json` | Only feeds whose owner permits ingestion and republication. Empty by default.                     |
 | Source permissions        | Confirm continued webcam embedding and any event-feed/image permissions with the relevant owners. |
 
-Before opening email delivery publicly, enable your host's rate limiting/bot protection for `/api/contact`. The route already checks origin, content type and input, uses a honeypot, and sends plain text. It stores no messages in this app, but delivery uses Resend. A provider timeout is reported as a send failure; check your provider logs before retrying repeatedly. Never commit `.env.local` or API keys.
+If enabling optional server email delivery, enable your host's rate limiting/bot protection for `/api/contact`. The route already checks origin, content type and input, uses a honeypot, and sends plain text. It stores no messages in this app, but delivery uses Resend. A provider timeout is reported as a send failure; check your provider logs before retrying repeatedly. Never commit `.env.local` or API keys.
 
 ## Structure
 
@@ -134,7 +140,7 @@ npm run events:refresh
 
 This optional local command fetches enabled permitted feeds, merges current records, prunes expired events, and atomically rewrites `data/events.json`. Review the diff and commit it. If tokens live in `.env.local`, export them first or run `node --env-file=.env.local --import tsx scripts/refresh-events.ts`.
 
-No Kuda Almaty, Kuda Fest, Instagram or ticketing-site scraper is enabled. No verified reusable event feed was found, so the shipped data contains three manually verified, attributed listings. Add a licensed feed for new automatic discoveries. Instagram Graph API integration would require the account owner's authorization and appropriate current Meta permissions. oEmbed displays known public posts; it is not an event discovery API and does not supply event dates.
+KudaFest and Sxodim are linked as independent local sources. No Kuda Almaty, KudaFest, Sxodim, Instagram or ticketing-site scraper is enabled. No verified reusable event feed was found, so the shipped data contains three manually verified, attributed listings. Add a licensed feed for new automatic discoveries. Instagram Graph API integration would require the account owner's authorization and appropriate current Meta permissions. oEmbed displays known public posts; it is not an event discovery API and does not supply event dates.
 
 ## Images, accessibility and performance
 

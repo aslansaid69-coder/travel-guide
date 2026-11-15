@@ -1,15 +1,33 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import { ArrowUpRight, Check } from "lucide-react";
+import site from "@/data/site.json";
+import { createEmailDraft } from "@/lib/contact";
 export function Contact() {
-  const [state, setState] = useState<"idle" | "sending" | "sent" | "error">(
-      "idle",
-    ),
+  const [state, setState] = useState<
+      "idle" | "sending" | "sent" | "error" | "draft"
+    >("idle"),
     [message, setMessage] = useState("");
+  const [draft, setDraft] = useState("");
+  const emailApp = site.contactMode === "email-app";
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
     const data = Object.fromEntries(new FormData(form));
+    if (emailApp) {
+      const href = createEmailDraft(site.contactEmail, data);
+      if (!href) {
+        setState("error");
+        setMessage("Please check your name, email, and message.");
+        return;
+      }
+      setDraft(href);
+      setState("draft");
+      setMessage(
+        "Your draft is ready. Open it in your email app, review it, and send when you’re ready.",
+      );
+      return;
+    }
     setState("sending");
     setMessage("");
     try {
@@ -33,7 +51,17 @@ export function Contact() {
     }
   }
   return (
-    <form className="contact-form" onSubmit={submit}>
+    <form
+      className="contact-form"
+      onSubmit={submit}
+      onChange={() => {
+        if (draft) {
+          setDraft("");
+          setState("idle");
+          setMessage("");
+        }
+      }}
+    >
       <div className="form-row">
         <label>
           Your name
@@ -76,19 +104,39 @@ export function Contact() {
         </label>
       </div>
       <div className="form-bottom">
-        <span>We’ll only use your email to reply.</span>
+        <span>
+          {emailApp
+            ? "Prepare a draft in your own email app."
+            : "We’ll only use your email to reply."}
+        </span>
         <button
           type="submit"
           disabled={state === "sending"}
           className="button button-accent"
         >
-          {state === "sending" ? "Sending…" : "Send a little hello"}
+          {state === "sending"
+            ? "Sending…"
+            : emailApp
+              ? "Prepare email"
+              : "Send a little hello"}
           {state === "sent" ? <Check size={17} /> : <ArrowUpRight size={17} />}
         </button>
       </div>
       <p className={`form-status ${state}`} role="status" aria-live="polite">
         {message}
       </p>
+      {draft && (
+        <div className="email-draft">
+          <a className="button button-outline" href={draft}>
+            Open email draft
+            <ArrowUpRight size={16} />
+          </a>
+          <span>
+            Or write to{" "}
+            <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a>.
+          </span>
+        </div>
+      )}
     </form>
   );
 }

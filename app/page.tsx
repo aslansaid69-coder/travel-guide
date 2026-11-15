@@ -7,7 +7,6 @@ import {
   Heart,
   Instagram,
   Globe,
-  Facebook,
   Github,
 } from "lucide-react";
 import { Header } from "@/components/header";
@@ -145,26 +144,18 @@ export default async function Home() {
               >
                 <Github size={19} />
               </a>
-              {site.instagramUrl && (
+              {site.localSources.map((source) => (
                 <a
-                  href={site.instagramUrl}
+                  key={source.name}
+                  href={source.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label="Our Instagram"
+                  aria-label={`${source.name} local events on Instagram`}
                 >
-                  <Instagram size={19} />
+                  <Instagram size={16} />
+                  {source.name}
                 </a>
-              )}
-              {site.facebookUrl && (
-                <a
-                  href={site.facebookUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Our Facebook"
-                >
-                  <Facebook size={19} />
-                </a>
-              )}
+              ))}
               <a
                 href="https://visitalmaty.kz/"
                 target="_blank"
