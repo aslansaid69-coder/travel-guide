@@ -8,6 +8,8 @@ import { visibleEvents } from "@/lib/event-view";
 export function Events({ initialEvents }: { initialEvents: TravelEvent[] }) {
   const [events, setEvents] = useState(initialEvents),
     [filter, setFilter] = useState("All events");
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [retained, setRetained] = useState(false);
   useEffect(() => {
     let disposed = false;
     const refresh = async () => {
@@ -15,7 +17,11 @@ export function Events({ initialEvents }: { initialEvents: TravelEvent[] }) {
         const r = await fetch("/api/events");
         if (!r.ok) return;
         const data = await r.json();
-        if (!disposed && Array.isArray(data.events)) setEvents(data.events);
+        if (!disposed && Array.isArray(data.events)) {
+          setEvents(data.events);
+          setLastUpdated(data.fetchedAt);
+          setRetained(data.sourceStatus !== "ok");
+        }
       } catch {
         /* Keep the verified server snapshot offline. */
       }
@@ -45,6 +51,12 @@ export function Events({ initialEvents }: { initialEvents: TravelEvent[] }) {
             <CalendarDays size={15} /> Last 30 days & coming up
           </span>
         </div>
+        <p className="source-updated">
+          {lastUpdated
+            ? `Approved listings refreshed ${new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Almaty", dateStyle: "medium", timeStyle: "short" }).format(new Date(lastUpdated))} · Almaty time`
+            : "Showing verified, owner-approved listings."}
+          {retained && " · Last available data retained."}
+        </p>
         <div className="events-toolbar">
           <p className="section-intro">
             The music, the meet-ups, the moments that make a city.

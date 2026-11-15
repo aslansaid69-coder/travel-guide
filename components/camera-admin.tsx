@@ -71,6 +71,7 @@ export function CameraAdmin() {
         >
           Run camera check
         </button>
+        <a href="/admin/updates">Automatic updates</a>
         <a href="/">Open guide</a>
         <button
           onClick={async () => {

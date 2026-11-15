@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowUpRight,
   ArrowDown,
@@ -12,6 +12,22 @@ import {
 } from "lucide-react";
 import places from "@/data/places.json";
 export function Places() {
+  const [lastSync, setLastSync] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/updates/status")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        const source = data?.sources?.find(
+          (s: { source_key: string }) => s.source_key === "places.curated",
+        );
+        if (active && source?.last_success) setLastSync(source.last_success);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
   const [filter, setFilter] = useState("All places"),
     [all, setAll] = useState(false),
     [expanded, setExpanded] = useState<string[]>([]);
@@ -31,6 +47,12 @@ export function Places() {
           </div>
           <span className="section-note">Seven places. So many stories.</span>
         </div>
+        <p className="source-updated">
+          Owner-approved guide
+          {lastSync &&
+            ` · synced ${new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Almaty", dateStyle: "medium" }).format(new Date(lastSync))}`}{" "}
+          · check current access before travelling.
+        </p>
         <div className="places-toolbar">
           <p className="section-intro">
             A few favourites to start your own Almaty story.

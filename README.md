@@ -26,7 +26,7 @@ Fonts and photos are served locally. No Google Fonts request, remote image key, 
 
 Live: https://almaty-travel-guide.vercel.app
 
-The Vercel project is connected to GitHub `main`; pushes trigger production builds. The production domain and daily-refresh secret are already configured. The cloud event-cache refresh runs daily in the 07:00–07:59 Asia/Almaty window. A separate Codex daily content review is active at 08:30 Asia/Almaty and requires the computer and desktop app to be running. See [operations](docs/OPERATIONS.md).
+The Vercel project is connected to GitHub `main`; pushes trigger production builds. The production domain and daily-refresh secret are already configured. The durable daily update targets 05:00 Asia/Almaty, and current weather refreshes hourly through signed GitHub workflows. A separate Codex daily content review is active at 08:30 Asia/Almaty and requires the computer and desktop app to be running. See [operations](docs/OPERATIONS.md).
 
 ## Deploy to Vercel
 
@@ -34,13 +34,13 @@ The Vercel project is connected to GitHub `main`; pushes trigger production buil
 2. Set `NEXT_PUBLIC_SITE_URL` to the final HTTPS domain. This controls canonical URLs, Open Graph URLs, robots.txt and sitemap.xml. Redeploy after changing it.
 3. Add a strong `CRON_SECRET` (for example, generate one using `openssl rand -hex 32`).
 4. The default email-app form needs no credentials. Only add Resend credentials if switching `data/site.json` contactMode to `server`.
-5. Deploy. `vercel.json` schedules `/api/cron/events` daily at **02:00 UTC / 07:00 Almaty**. Vercel sends the secret in an Authorization Bearer header. The linked Hobby plan runs this once daily within the 07:00–07:59 Almaty window.
+5. Deploy. The workflows in `.github/workflows` call the daily and hourly update endpoints with GitHub OIDC. The daily target is **00:00 UTC / 05:00 Almaty**. GitHub may delay scheduled runs. `vercel.json` no longer schedules the older 07:00 cache-only cron. See [stage 2 setup](docs/STAGE-2-UPDATES.md) for QStash as an alternative.
 
 ## Deploy to Netlify
 
 Import the same repository. `netlify.toml` sets `npm run build`, `.next`, and Node 22. Netlify's Next.js adapter provides SSR, route handlers, image optimization and ISR; this is **not** a static export. Set the same environment variables in the Netlify dashboard. [Netlify Next.js documentation](https://docs.netlify.com/build/frameworks/framework-setup-guides/nextjs/overview/).
 
-On-demand daily revalidation works on both hosts. Vercel's cron configuration is Vercel-specific. For a timed Netlify refresh, configure your scheduler to GET `https://YOUR_DOMAIN/api/cron/events` with `Authorization: Bearer YOUR_CRON_SECRET` once daily. Do not put that secret in a public URL, client code, or repository.
+For Netlify, update the workflow destination URLs and NEXT_PUBLIC_SITE_URL to the deployed origin, or configure QStash. The server endpoints accept signed scheduler calls or your CRON_SECRET Bearer header. Do not put that secret in a public URL, client code, or repository.
 
 ## Manual configuration
 
@@ -70,6 +70,14 @@ tests/                Date-window, permission, parsing and contact tests
 docs/INTEGRATIONS.md   Camera investigation and source details
 ```
 
+## Weather and automatic updates — stage 2
+
+The homepage now includes current conditions, seven forecast days, clothing advice, planning cautions and an outdoor window beside the cameras. Durable per-source snapshots retain last-good data during outages. `/admin/updates` shows source/run/alert history and provides Run update now. The daily workflow targets 05:00 Almaty; weather refreshes hourly.
+
+Open-Meteo evaluation mode serves this prototype. Before commercial operation, set WEATHER_MODE=commercial and OPEN_METEO_API_KEY. Owner failure alerts use Resend after two consecutive failed runs; delivery requires RESEND_API_KEY, ALERT_FROM (verified sender) and ALERT_TO. Missing credentials remain explicit in the owner dashboard.
+
+See [full setup, source contracts, budget and testing checklist](docs/STAGE-2-UPDATES.md). Restaurant/menu/pricing adapters remain unconfigured until their later stages receive real data; no successful external refresh is claimed for them.
+
 ## Cameras — upgraded stage 1
 
 Only direct ipcam.kz HLS streams remain. RTSP.me, World-Cam links and external-player fallback cards are removed. The owner's 2026-11-16 instruction explicitly retains ipcam.kz. `data/cameras.json` is the approved seed; live configuration and health now persist in Postgres.
@@ -91,7 +99,7 @@ Staff env: `DATABASE_URL`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_COOKIE_SECRET`, `OWN
 
 Additional hosts require `CAMERA_ALLOWED_HOSTS` in Vercel; add exact approved operator/CDN hosts, never wildcard domains. The admin must record embedding permission for every added feed. To use QStash instead of GitHub scheduling, set the three `QSTASH_*` values from `.env.example`, run `npm run schedules:configure`, and disable the GitHub workflow; do not run both.
 
-See [architecture and stage gates](docs/UPGRADE-ARCHITECTURE.md) and [camera audit](docs/CAMERA-AUDIT.md). The larger travel-hub features are delivered in eight owner-confirmed stages; stages 2–8 are not implemented by the stage-1 change.
+See [architecture and stage gates](docs/UPGRADE-ARCHITECTURE.md) and [camera audit](docs/CAMERA-AUDIT.md). The larger travel-hub features are delivered in eight owner-confirmed stages. Stages 1–2 are implemented; stages 3–8 await their respective work and confirmation.
 
 ## Events
 
@@ -141,13 +149,13 @@ JSON feeds use the event schema above, either an array or `{ "events": [...] }`.
 
 RSS feeds must contain `event:startDate`, optional `event:endDate`, and `event:location`, plus title, description and link. Use `xmlns:event="urn:almaty:event"` or your agreed partner namespace. Ordinary news RSS is not an event calendar. Items without explicit valid event dates are skipped. Remote images are not imported automatically; add licensed images under `public/images` first.
 
-The server cache expires after 86,400 seconds. The authenticated cron endpoint expires the event cache, fetches the authorised sources, and invalidates the homepage. The open browser refreshes events hourly. `/api/events` exposes only visible events and a generic source status, never feed credentials. Failed feeds retain the curated seed records; this implementation does not persist the last successful remote feed snapshot, so remote-only events may temporarily disappear during an outage. For durable remote history, periodically use the maintenance script or add a database.
+The daily job persists a separate last-good snapshot for every permitted feed. Failed feeds retain their payload and success timestamp. New/changed external records go into `content_candidates`; only approved published versions are exposed to visitors. The open browser refreshes the approved event list hourly, and expired records are filtered by Almaty date. `/api/events` never exposes feed credentials.
 
 ```sh
 npm run events:refresh
 ```
 
-This optional local command fetches enabled permitted feeds, merges current records, prunes expired events, and atomically rewrites `data/events.json`. Review the diff and commit it. If tokens live in `.env.local`, export them first or run `node --env-file=.env.local --import tsx scripts/refresh-events.ts`.
+This legacy optional local command fetches enabled permitted feeds and rewrites `data/events.json`; do not run it as unattended publication because new candidates require owner review. Review every imported record and the diff before committing it. The cloud job uses durable candidate/snapshot tables instead. If tokens live in `.env.local`, export them first or run `node --env-file=.env.local --import tsx scripts/refresh-events.ts`.
 
 KudaFest and Sxodim are linked as independent local sources. No Kuda Almaty, KudaFest, Sxodim, Instagram or ticketing-site scraper is enabled. No verified reusable event feed was found, so the shipped data contains three manually verified, attributed listings. Add a licensed feed for new automatic discoveries. Instagram Graph API integration would require the account owner's authorization and appropriate current Meta permissions. oEmbed displays known public posts; it is not an event discovery API and does not supply event dates.
 

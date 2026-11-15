@@ -10,7 +10,8 @@
     "test": "node --import tsx --test tests/*.test.ts",
     "events:refresh": "node --import tsx scripts/refresh-events.ts",
     "db:migrate": "node --env-file=.env.local --import tsx scripts/migrate.ts",
-    "schedules:configure": "node --env-file=.env.local --import tsx scripts/configure-schedules.ts"
+    "schedules:configure": "node --env-file=.env.local --import tsx scripts/configure-schedules.ts",
+    "test:updates:integration": "node --env-file=.env.stage2-test --import tsx scripts/test-updates-integration.ts"
   },
   "dependencies": {
     "@fontsource/dm-serif-display": "^5.2.5",

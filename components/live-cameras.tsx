@@ -2,6 +2,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { MapPin, Play, Video, ChevronDown, X } from "lucide-react";
+import { WeatherPanel } from "@/components/weather/weather-panel";
 import type { Camera } from "@/lib/cameras/types";
 function CameraCard({ camera }: { camera: Camera }) {
   const [active, setActive] = useState(false),
@@ -239,38 +240,43 @@ export function LiveCameras() {
         <p className="section-intro">
           A mountain morning. A change in the clouds. See Almaty as it happens.
         </p>
-        <div className="camera-grid">
-          {cameras.slice(0, all ? cameras.length : 3).map((camera) => (
-            <CameraCard key={camera.id} camera={camera} />
-          ))}
-        </div>
-        {!cameras.length && (
-          <div className="empty-state">
-            <Video />
-            <p>
-              {loaded
-                ? "The cameras are taking a short break. Please check back soon."
-                : "Checking live views…"}
-            </p>
+        <div className="live-hub-grid">
+          <div className="live-camera-column">
+            <div className="camera-grid">
+              {cameras.slice(0, all ? cameras.length : 3).map((camera) => (
+                <CameraCard key={camera.id} camera={camera} />
+              ))}
+            </div>
+            {!cameras.length && (
+              <div className="empty-state">
+                <Video />
+                <p>
+                  {loaded
+                    ? "The cameras are taking a short break. Please check back soon."
+                    : "Checking live views…"}
+                </p>
+              </div>
+            )}
+            <div className="section-bottom">
+              <p>
+                Direct streams by ipcam.kz. The live badge appears only during
+                video playback.
+              </p>
+              {cameras.length > 3 && (
+                <button
+                  className="text-button"
+                  onClick={() => setAll(!all)}
+                  aria-expanded={all}
+                >
+                  {all
+                    ? "Show fewer cameras"
+                    : `View all ${cameras.length} cameras`}
+                  <ChevronDown size={16} className={all ? "rotate-180" : ""} />
+                </button>
+              )}
+            </div>
           </div>
-        )}
-        <div className="section-bottom">
-          <p>
-            Direct streams by ipcam.kz. The live badge appears only during video
-            playback.
-          </p>
-          {cameras.length > 3 && (
-            <button
-              className="text-button"
-              onClick={() => setAll(!all)}
-              aria-expanded={all}
-            >
-              {all
-                ? "Show fewer cameras"
-                : `View all ${cameras.length} cameras`}
-              <ChevronDown size={16} className={all ? "rotate-180" : ""} />
-            </button>
-          )}
+          <WeatherPanel />
         </div>
       </div>
     </section>
