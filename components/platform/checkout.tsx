@@ -311,7 +311,10 @@ export function Checkout({
                         <Button
                           primary
                           busy={s.busy}
-                          disabled={!d.paymentsConfigured && d.totalMinor > 0}
+                          disabled={
+                            !d.paymentsConfigured &&
+                            d.totalMinor > Number(d.request.paidMinor)
+                          }
                           title={
                             !d.paymentsConfigured
                               ? "Online payments need the operator’s Stripe configuration"
@@ -324,6 +327,21 @@ export function Checkout({
                           <LockKeyhole size={17} />
                           Pay remaining balance <ArrowRight size={17} />
                         </Button>
+                        {d.request.status === "quote-sent" &&
+                          Number(d.request.paidMinor) >=
+                            Math.ceil(
+                              (d.totalMinor * d.quote.deposit_percent) / 100,
+                            ) &&
+                          Number(d.request.paidMinor) < d.totalMinor && (
+                            <Button
+                              busy={s.busy}
+                              onClick={() =>
+                                void s.run({ action: "pay", mode: "deposit" })
+                              }
+                            >
+                              Confirm using the recorded deposit
+                            </Button>
+                          )}
                         {d.quote.deposit_percent < 100 &&
                           Number(d.request.paidMinor) <
                             Math.ceil(
@@ -398,6 +416,22 @@ export function Checkout({
                             </a>
                           </>
                         )}
+                        {p.status === "paid" &&
+                          (p.invoice_url || p.invoice_hosted_url) && (
+                            <>
+                              {" · "}
+                              <a
+                                href={p.invoice_url || p.invoice_hosted_url}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                Stripe invoice PDF
+                                {p.invoice_number
+                                  ? ` · ${p.invoice_number}`
+                                  : ""}
+                              </a>
+                            </>
+                          )}
                       </p>
                     ))
                   ) : (

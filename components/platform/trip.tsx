@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useLanguage } from "@/components/hub/language";
 import {
   MessageCircle,
   MapPin,
@@ -19,8 +20,11 @@ import {
   PrivatePhoto,
   downloadPrivate,
   platform,
+  Money,
 } from "./shared";
 export function TripRoom({ id }: { id: string }) {
+  const { lang } = useLanguage();
+  const attemptedTranslations = useRef(new Set<string>());
   const access = usePrivate(),
     s = useResource(`trip/${id}`, access.key, access.ready),
     [body, setBody] = useState(""),
@@ -31,6 +35,64 @@ export function TripRoom({ id }: { id: string }) {
     [translationConsent, setTranslationConsent] = useState(false),
     [day, setDay] = useState(0);
   const d = s.data;
+  useEffect(() => {
+    if (!access.ready) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void s.load();
+    }, 30000);
+    return () => window.clearInterval(timer);
+  }, [access.ready, s.load]);
+  useEffect(() => {
+    if (!translationConsent || !d?.translationConfigured) return;
+    let cancelled = false;
+    const pending = d.messages
+      .filter((m: any) => {
+        const source =
+          m.extra?.language || (/[а-яё]/i.test(m.body) ? "ru" : "en");
+        return (
+          m.body.trim() &&
+          source !== lang &&
+          !attemptedTranslations.current.has(`${m.id}:${lang}`)
+        );
+      })
+      .slice(-5);
+    // Explicit per-session consent covers only visible messages, in bounded batches.
+    void (async () => {
+      for (const m of pending) {
+        if (cancelled) break;
+        const key = `${m.id}:${lang}`;
+        attemptedTranslations.current.add(key);
+        try {
+          const result = await platform(
+            `trip/${id}`,
+            {
+              action: "translate",
+              messageId: Number(m.id),
+              language: lang,
+              consent: true,
+            },
+            access.key,
+          );
+          if (!cancelled)
+            setTranslations((current) => ({ ...current, [key]: result.text }));
+        } catch (error) {
+          if (!cancelled) s.setMessage((error as Error).message);
+          break;
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    translationConsent,
+    d?.messages,
+    d?.translationConfigured,
+    lang,
+    id,
+    access.key,
+    s.setMessage,
+  ]);
   return (
     <Shell
       title="Your own little travel desk."
@@ -45,6 +107,13 @@ export function TripRoom({ id }: { id: string }) {
         </Empty>
       ) : (
         <>
+          {d.request.planNeedsApproval && (
+            <p className="platform-warning">
+              Itinerary edits are awaiting a new quote. Guide arrangements
+              follow the accepted itinerary until the team reconfirms the
+              changes.
+            </p>
+          )}
           <div className="platform-actions">
             <span className="platform-badge">{d.request.status}</span>
             <a
@@ -144,8 +213,8 @@ export function TripRoom({ id }: { id: string }) {
                         {m.visibility === "internal" ? "· Internal note" : ""}
                       </small>
                       {m.body}
-                      {translations[m.id] && (
-                        <p lang="ru">{translations[m.id]}</p>
+                      {translations[`${m.id}:${lang}`] && (
+                        <p lang={lang}>{translations[`${m.id}:${lang}`]}</p>
                       )}
                       {m.extra?.kind === "location" && (
                         <p>
@@ -167,7 +236,9 @@ export function TripRoom({ id }: { id: string }) {
                       )}
                       <div className="platform-actions">
                         <Button
-                          disabled={!translationConsent}
+                          disabled={
+                            !translationConsent || !d.translationConfigured
+                          }
                           title={
                             !translationConsent
                               ? "Allow external translation below first"
@@ -180,21 +251,21 @@ export function TripRoom({ id }: { id: string }) {
                                 {
                                   action: "translate",
                                   messageId: Number(m.id),
-                                  language: "ru",
+                                  language: lang,
                                   consent: true,
                                 },
                                 access.key,
                               );
-                              setTranslations({
-                                ...translations,
-                                [m.id]: r.text,
-                              });
+                              setTranslations((current) => ({
+                                ...current,
+                                [`${m.id}:${lang}`]: r.text,
+                              }));
                             } catch (e) {
                               s.setMessage((e as Error).message);
                             }
                           }}
                         >
-                          Translate to Russian
+                          Translate to {lang === "ru" ? "Russian" : "English"}
                         </Button>
                       </div>
                     </article>
@@ -204,11 +275,19 @@ export function TripRoom({ id }: { id: string }) {
                   <input
                     type="checkbox"
                     checked={translationConsent}
+                    disabled={!d.translationConfigured}
                     onChange={(e) => setTranslationConsent(e.target.checked)}
                   />
-                  Allow selected messages to be sent to the configured AI
-                  translation provider.
+                  Allow automatic translation of new visible messages by the
+                  configured AI provider (up to five per refresh). Originals
+                  stay visible.
                 </label>
+                {!d.translationConfigured && (
+                  <p className="platform-muted">
+                    Message translation becomes available when the owner
+                    connects an AI provider.
+                  </p>
+                )}
                 <form
                   className="platform-form platform-detail"
                   onSubmit={async (e) => {
@@ -216,6 +295,7 @@ export function TripRoom({ id }: { id: string }) {
                     const r = await s.run({
                       action: "message",
                       body,
+                      language: lang,
                       kind: location ? "location" : "text",
                       ...(location
                         ? { lat: Number(latitude), lng: Number(longitude) }
@@ -414,24 +494,108 @@ export function TripRoom({ id }: { id: string }) {
                 <section className="platform-card">
                   <h2>One more Almaty adventure?</h2>
                   {d.followups.map((f: any) => (
-                    <div key={f.id}>
+                    <article className="platform-evidence" key={f.id}>
                       <h3>{f.data.plan.title}</h3>
-                      <p>
-                        This creates a new request. Your manager will confirm
-                        the final itinerary, availability and quote before
-                        payment.
-                      </p>
-                      <Button
-                        onClick={() =>
-                          void s.run({
-                            action: "accept-followup",
-                            followupId: f.id,
-                          })
-                        }
-                      >
-                        Request this follow-up
-                      </Button>
-                    </div>
+                      {f.data.quote ? (
+                        <>
+                          <p>
+                            {f.data.plan.startDate} ·{" "}
+                            {f.data.plan.adults + f.data.plan.children} guests ·{" "}
+                            <Money
+                              amount={f.data.quote.amountMinor}
+                              currency={f.data.quote.currency}
+                            />
+                          </p>
+                          <p>{f.data.quote.terms}</p>
+                          <details className="platform-detail">
+                            <summary>Itinerary and cancellation terms</summary>
+                            {f.data.plan.days.map((day: any, i: number) => (
+                              <p key={i}>
+                                Day {i + 1}:{" "}
+                                {day.stops
+                                  .map(
+                                    (stop: any) =>
+                                      `${stop.start} · ${stop.itemId}`,
+                                  )
+                                  .join(" → ")}
+                              </p>
+                            ))}
+                            <p>{f.data.policy.clientTerms}</p>
+                            <p>
+                              Free cancellation until{" "}
+                              {f.data.policy.freeCancellationHours} hours before
+                              the accepted trip start date at 00:00 Almaty time.
+                              Later refund: {f.data.policy.lateRefundPercent}%.
+                            </p>
+                            <p>
+                              Guide acceptance and current service availability
+                              are checked separately.
+                            </p>
+                          </details>
+                          {f.status === "accepted" ? (
+                            <Button
+                              onClick={() =>
+                                void s.run({
+                                  action: "accept-followup",
+                                  followupId: f.id,
+                                  offerVersion: f.data.offerVersion,
+                                  acceptTerms: true,
+                                  mode: "full",
+                                  payNow: false,
+                                })
+                              }
+                            >
+                              Open this follow-up booking
+                            </Button>
+                          ) : (
+                            <form
+                              className="platform-form platform-detail"
+                              onSubmit={(e) => {
+                                e.preventDefault();
+                                const form = new FormData(e.currentTarget);
+                                void s.run({
+                                  action: "accept-followup",
+                                  followupId: f.id,
+                                  offerVersion: f.data.offerVersion,
+                                  acceptTerms: form.get("terms") === "on",
+                                  mode: form.get("mode"),
+                                  payNow: true,
+                                });
+                              }}
+                            >
+                              <Field label="Payment choice">
+                                <select name="mode">
+                                  <option value="full">Full payment</option>
+                                  {f.data.quote.depositPercent < 100 && (
+                                    <option value="deposit">
+                                      {f.data.quote.depositPercent}% deposit
+                                    </option>
+                                  )}
+                                  {d.payOnArrival && (
+                                    <option value="arrival">
+                                      Pay on arrival
+                                    </option>
+                                  )}
+                                </select>
+                              </Field>
+                              <label className="platform-check">
+                                <input name="terms" type="checkbox" required />I
+                                accept this exact offer, the client terms and
+                                cancellation policy.
+                              </label>
+                              <Button primary busy={s.busy}>
+                                Accept offer & continue to payment
+                              </Button>
+                            </form>
+                          )}
+                        </>
+                      ) : (
+                        <p>
+                          This proposal needs a final quote from the travel
+                          desk.
+                        </p>
+                      )}
+                    </article>
                   ))}
                 </section>
               )}

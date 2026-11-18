@@ -1,4 +1,8 @@
-import { paymentEnriched, reconcileRefund } from "@/lib/platform/commerce";
+import {
+  paymentEnriched,
+  reconcileRefund,
+  recordInvoice,
+} from "@/lib/platform/commerce";
 import { database } from "@/lib/db";
 import { stripe } from "@/lib/hub/bookings";
 import { paymentLink } from "@/lib/platform/store";
@@ -25,6 +29,17 @@ export async function POST(request: Request) {
       { error: "Invalid webhook signature." },
       { status: 400 },
     );
+  }
+  if (event.type === "invoice.paid" || event.type === "invoice.finalized") {
+    try {
+      await recordInvoice(event.data.object);
+      return Response.json({ received: true });
+    } catch {
+      return Response.json(
+        { error: "Invoice reconciliation needs retry." },
+        { status: 500 },
+      );
+    }
   }
   if (
     ["refund.created", "refund.updated", "refund.failed"].includes(event.type)

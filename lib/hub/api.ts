@@ -342,11 +342,7 @@ export async function handle(request: Request, path: string[]) {
     if (b.action === "arrival")
       return json({ url: `/checkout/${id}?plan=${r.plan_id}` });
     if (b.action === "cancel") {
-      await sql.transaction([
-        sql`UPDATE hub_requests SET status='cancelled',payment_status=CASE WHEN paid_minor>0 THEN 'refund-review' ELSE payment_status END,updated_at=now() WHERE id=${id}`,
-        sql`UPDATE hub_holds SET state='released' WHERE request_id=${id}`,
-        sql`INSERT INTO hub_messages(request_id,actor,visibility,body) VALUES(${id},'client','client','Cancellation requested. Any refund requires review under the accepted quote terms.')`,
-      ]);
+      await sql`SELECT platform_cancel_request(${id},'client')`;
       if (process.env.ALERT_TO)
         await notify(
           `cancel:${id}`,
@@ -460,9 +456,29 @@ export async function handle(request: Request, path: string[]) {
           409,
           "Confirmation requires an approved quote and a payment or pay-on-arrival capacity check.",
         );
-      await sql`UPDATE hub_requests SET status=${status},payment_status=CASE WHEN ${status}='cancelled' AND paid_minor>0 THEN 'refund-review' ELSE payment_status END,assigned_to=${assigned || null},contacted_at=CASE WHEN ${status}<>'new' THEN COALESCE(contacted_at,now()) ELSE contacted_at END,version=version+1,updated_at=now() WHERE id=${r.id}`;
+      if (
+        status === "completed" &&
+        (
+          await sql`SELECT id FROM guide_assignments WHERE request_id=${r.id} AND status IN ('offered','accepted','started','completion_requested')`
+        )[0]
+      )
+        throw new HttpError(
+          409,
+          "Approve the guide’s completion in Guides & assignments before completing this package.",
+        );
       if (status === "cancelled")
-        await sql`UPDATE hub_holds SET state='released' WHERE request_id=${r.id}`;
+        await sql`SELECT platform_cancel_request(${r.id},${staff.id})`;
+      else if (status === "completed") {
+        try {
+          await sql`SELECT platform_complete_request(${r.id})`;
+        } catch {
+          throw new HttpError(
+            409,
+            "Resolve the guide’s active assignment before completing the package.",
+          );
+        }
+      } else
+        await sql`UPDATE hub_requests SET status=${status},cancelled_at=CASE WHEN status='cancelled' THEN NULL ELSE cancelled_at END,assigned_to=${assigned || null},contacted_at=CASE WHEN ${status}<>'new' THEN COALESCE(contacted_at,now()) ELSE contacted_at END,version=version+1,updated_at=now() WHERE id=${r.id}`;
       if (b.note)
         await sql`INSERT INTO hub_messages(request_id,actor,visibility,body) VALUES(${r.id},${staff.id},'internal',${value(b.note, 2000)})`;
       await audit(staff.id, "request.status", r.id, { status });
@@ -526,6 +542,18 @@ export async function handle(request: Request, path: string[]) {
           400,
           `A selected service requires at least ${minimumDeposit}% card deposit.`,
         );
+      const guideWindow = plan.days.some((day) => day.stops.length)
+        ? (await import("@/lib/platform/guides")).tripWindow(plan)
+        : null;
+      if (
+        (
+          await sql`SELECT id FROM guide_assignments WHERE request_id=${r.id} AND status IN ('started','completion_requested') AND (${!guideWindow} OR starts_at<>${guideWindow?.start || null}::timestamptz OR ends_at<>${guideWindow?.end || null}::timestamptz OR currency<>${currency})`
+        )[0]
+      )
+        throw new HttpError(
+          409,
+          "Coordinate the running tour before changing its dates or currency.",
+        );
       const breakdown = estimate(plan, items, await settings(), await rates());
       const quoteId = randomUUID();
       const newVersion = await savePlan(r.plan_id, plan, p.version);
@@ -534,6 +562,7 @@ export async function handle(request: Request, path: string[]) {
         sql`INSERT INTO hub_quotes(id,request_id,plan_version,plan,breakdown,amount_minor,currency,deposit_percent,terms) VALUES(${quoteId},${r.id},${newVersion},${JSON.stringify(plan)}::jsonb,${JSON.stringify({ estimate: breakdown, adjustmentNote: value(b.adjustmentNote || "", 1000) })}::jsonb,${amount},${currency},${deposit},${terms})`,
         sql`INSERT INTO platform_quote_terms(quote_id,data) VALUES(${quoteId},${JSON.stringify((await import("@/lib/platform/commerce")).quoteTerms(amount, await (await import("@/lib/platform/store")).commerceSettings(), currency))}::jsonb)`,
         sql`UPDATE hub_requests SET quote_id=${quoteId},currency=${currency},status='quote-sent',version=version+1,contacted_at=COALESCE(contacted_at,now()),updated_at=now() WHERE id=${r.id}`,
+        sql`SELECT platform_schedule_change(${r.id},${guideWindow?.start || null}::timestamptz,${guideWindow?.end || null}::timestamptz,${currency})`,
       ]);
       await audit(staff.id, "quote.send", r.id, {
         quoteId,

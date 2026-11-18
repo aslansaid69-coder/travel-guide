@@ -210,7 +210,11 @@ async function prepareCheckout(
     const selected = await planSlots(r.quote_plan, items, true);
     await sql`SELECT hub_reserve(${requestId},${JSON.stringify(selected)}::jsonb,${r.quote_plan.adults + r.quote_plan.children},false)`;
   }
-  const bucket = Math.floor(Date.now() / 1800000);
+  const bucket = Math.floor(Date.now() / 1800000),
+    invoiceEnabled = process.env.STRIPE_INVOICE_ENABLED === "true",
+    paymentReference = hash(
+      `checkout:${requestId}:${r.quote_id}:${mode}:${Number(r.paid_minor)}:${total}:${bucket}:${revision}:${invoiceEnabled}`,
+    );
   const session = await service.checkout.sessions.create(
     {
       mode: "payment",
@@ -221,6 +225,21 @@ async function prepareCheckout(
         metadata: { requestId, quoteId: r.quote_id },
       },
       customer_email: r.guest.email,
+      // Optional paid-invoice creation has separate provider fees. Enable only
+      // after configuring the operator's legal/tax details in Stripe.
+      ...(invoiceEnabled
+        ? {
+            customer_creation: "always" as const,
+            billing_address_collection: "required" as const,
+            invoice_creation: {
+              enabled: true,
+              invoice_data: {
+                metadata: { requestId, quoteId: r.quote_id, paymentReference },
+                description: `Almaty booking ${requestId}: ${mode === "deposit" ? "deposit" : "payment / balance"}. This invoice covers this card payment only.`,
+              },
+            },
+          }
+        : {}),
       line_items: [
         {
           quantity: 1,
@@ -240,15 +259,18 @@ async function prepareCheckout(
       cancel_url: `${siteUrl}/checkout/${requestId}?plan=${r.plan_id}&payment=cancelled`,
     },
     {
-      idempotencyKey: `checkout:${requestId}:${r.quote_id}:${mode}:${Number(r.paid_minor)}:${total}:${bucket}:${hash(revision).slice(0, 12)}`,
+      idempotencyKey: `checkout:${paymentReference}`,
     },
   );
-  await sql`INSERT INTO hub_payment_sessions(id,request_id,quote_id,amount_minor,currency) VALUES(${session.id},${requestId},${r.quote_id},${amount},${r.quote_currency}) ON CONFLICT DO NOTHING`;
+  await sql`INSERT INTO hub_payment_sessions(id,request_id,quote_id,amount_minor,currency,invoice_reference) VALUES(${session.id},${requestId},${r.quote_id},${amount},${r.quote_currency},${invoiceEnabled ? paymentReference : null}) ON CONFLICT DO NOTHING`;
   return { url: session.url };
 }
-export async function confirmArrival(requestId: string, fullyCovered = false) {
+export async function confirmArrival(
+  requestId: string,
+  paymentRequirementMet = false,
+) {
   const sql = database();
-  if (!fullyCovered && !(await settings()).payOnArrival)
+  if (!paymentRequirementMet && !(await settings()).payOnArrival)
     throw new HttpError(409, "Pay on arrival is disabled.");
   const r = (
     await sql`SELECT r.*,q.plan,q.status AS quote_status,q.expires_at,q.plan_version FROM hub_requests r JOIN hub_quotes q ON q.id=r.quote_id WHERE r.id=${requestId}`
@@ -271,7 +293,7 @@ export async function confirmArrival(requestId: string, fullyCovered = false) {
     `arrival:${requestId}:${r.quote_id}`,
     r.guest.email,
     "Your Almaty booking is confirmed",
-    `Your pay-on-arrival booking is confirmed.\n${siteUrl}/trip/${r.plan_id}\nPlease use your private plan link to contact the team.`,
+    `${paymentRequirementMet ? "Your booking is confirmed using recorded payments or credit. Review any remaining balance on your private booking page." : "Your pay-on-arrival booking is confirmed."}\n${siteUrl}/trip/${r.plan_id}\nPlease use your private plan link to contact the team.`,
   );
   return { ok: true };
 }

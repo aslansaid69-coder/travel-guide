@@ -83,7 +83,8 @@ export function PaymentsAdmin() {
                           >
                             Checkout
                           </a>
-                          {r.status !== "cancelled" && (
+                          {(r.status !== "cancelled" ||
+                            r.payment_status === "refund-review") && (
                             <Button
                               busy={s.busy}
                               onClick={() => {

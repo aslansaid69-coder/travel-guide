@@ -2,16 +2,20 @@ import { randomUUID } from "node:crypto";
 import { database } from "@/lib/db";
 import { clientSession } from "@/lib/hub/access";
 import {
-  createPlan,
   notify,
   audit,
   catalog,
-  availableSlots,
   privateLink,
+  assignedManager,
 } from "@/lib/hub/store";
-import { createRequest } from "@/lib/hub/bookings";
+import { z } from "zod";
+import { planSlots } from "@/lib/hub/bookings";
+import { quoteTerms, pay } from "./commerce";
+import { tripWindow } from "./guides";
+import { notifyBooking } from "./store";
+import { guideSchema } from "./types";
 import { hash, token, HttpError } from "@/lib/hub/security";
-import { planSchema, contactSchema } from "@/lib/hub/types";
+import { planSchema } from "@/lib/hub/types";
 import { commerceSettings, booking } from "./store";
 import { unsubscribeToken, validUnsubscribe } from "@/lib/hub/newsletter";
 import { siteUrl } from "@/lib/site";
@@ -116,34 +120,182 @@ export async function createFollowup(
   await audit(a.actor, "guide.followup.propose", id, { followup: fid });
   return { ok: true };
 }
+export async function approveFollowup(
+  id: string,
+  input: unknown,
+  actor: string,
+) {
+  const sql = database(),
+    f = (
+      await sql`SELECT * FROM guide_followups WHERE id=${id} AND status IN ('pending','approved')`
+    )[0];
+  if (!f) throw new HttpError(409, "Proposal is no longer editable.");
+  const data = z
+    .object({
+      plan: planSchema,
+      amountMinor: z.number().int().min(0).max(100000000),
+      currency: z.enum(["KZT", "USD", "EUR", "RUB", "GBP"]),
+      depositPercent: z.number().int().min(1).max(100),
+      terms: z.string().trim().min(10).max(5000),
+    })
+    .parse(input);
+  const guide = guideSchema.parse(
+    (
+      await sql`SELECT data FROM guides WHERE id=${f.guide_id} AND status='active'`
+    )[0]?.data,
+  );
+  if (guide.currency !== data.currency)
+    throw new HttpError(
+      400,
+      "The follow-up settlement currency must match the guide allocation currency.",
+    );
+  const plan = { ...data.plan, preferredGuideId: f.guide_id },
+    items = await catalog();
+  await planSlots(plan, items, true);
+  const w = tripWindow(plan);
+  if (new Date(w.start).valueOf() < Date.now())
+    throw new HttpError(400, "Choose future dates and current service slots.");
+  const minimum = Math.max(
+    1,
+    ...plan.days.flatMap((day) =>
+      day.stops.map(
+        (stop) =>
+          items.find((i) => i.id === stop.itemId)?.serviceDepositPercent || 1,
+      ),
+    ),
+  );
+  if (data.depositPercent < minimum)
+    throw new HttpError(
+      400,
+      `A service requires at least ${minimum}% deposit.`,
+    );
+  const fee = Math.ceil(
+    guide.rateMinor * (guide.rateType === "hour" ? w.hours : 1),
+  );
+  const offerVersion = randomUUID(),
+    quote = {
+      amountMinor: data.amountMinor,
+      currency: data.currency,
+      depositPercent: data.depositPercent,
+      terms: data.terms,
+    },
+    policy = quoteTerms(
+      data.amountMinor,
+      await commerceSettings(),
+      data.currency,
+    );
+  const record = {
+    plan,
+    quote,
+    policy,
+    offerVersion,
+    guideFeeMinor: fee,
+    approvedBy: actor,
+    approvedAt: new Date().toISOString(),
+  };
+  const updated =
+    await sql`UPDATE guide_followups SET data=${JSON.stringify(record)}::jsonb,status='approved' WHERE id=${id} AND status IN ('pending','approved') RETURNING id`;
+  if (!updated.length)
+    throw new HttpError(409, "The traveller already accepted this offer.");
+  await audit(actor, "followup.quote.approve", f.request_id, {
+    followup: id,
+    offerVersion,
+  });
+  const parent = (
+    await sql`SELECT guest FROM hub_requests WHERE id=${f.request_id}`
+  )[0];
+  await notifyBooking(
+    f.request_id,
+    `followup-ready:${offerVersion}`,
+    "A new Almaty trip offer is ready",
+    "Your travel desk reviewed a follow-up proposal. Open your private trip area to review the full itinerary, price and terms.",
+    parent?.guest.marketingConsent === true,
+  );
+  return { ok: true };
+}
 export async function acceptFollowup(
   request: Request,
   id: string,
   followupId: string,
+  version: string,
+  acceptTerms: boolean,
+  mode: "full" | "deposit" | "arrival",
+  payNow = false,
 ) {
+  if (!acceptTerms)
+    throw new HttpError(
+      400,
+      "Review and accept this offer and its cancellation terms first.",
+    );
   const a = await booking(request, id, { staff: false, guide: false }),
     sql = database(),
     f = (
-      await sql`SELECT * FROM guide_followups WHERE id=${followupId} AND request_id=${id} AND status='approved'`
+      await sql`SELECT * FROM guide_followups WHERE id=${followupId} AND request_id=${id} AND status IN ('approved','accepted')`
     )[0];
-  if (!f) throw new HttpError(409, "This follow-up is not approved.");
-  if (f.new_request_id) {
-    const old = (
-      await sql`SELECT plan_id FROM hub_requests WHERE id=${f.new_request_id}`
-    )[0];
-    return { url: await privateLink(old.plan_id) };
+  if (!f || f.data.offerVersion !== version)
+    throw new HttpError(409, "The offer changed. Reload and review it again.");
+  let requestId: string = f.new_request_id || "";
+  if (!requestId) {
+    const plan = planSchema.parse(f.data.plan),
+      items = await catalog(),
+      slots = await planSlots(plan, items, true),
+      w = tripWindow(plan),
+      manager = await assignedManager(a.request.guest.language);
+    try {
+      requestId = (
+        await sql`SELECT platform_accept_followup(${f.id},${version},${token().slice(0, 24)},${hash(token())},${randomUUID()},${randomUUID()},${a.user?.id || null},${manager?.user_id || null},${JSON.stringify(slots)}::jsonb,${randomUUID()},${w.start},${w.end},${f.data.guideFeeMinor}) AS id`
+      )[0].id;
+    } catch {
+      throw new HttpError(
+        409,
+        "The offer, guide calendar or service capacity changed. Ask the travel desk to adjust it.",
+      );
+    }
   }
-  const g = contactSchema.parse(a.request.guest),
-    plan = planSchema.parse(f.data.plan);
-  const saved = await createPlan(plan, a.user?.id);
-  const created = await createRequest(
-    saved.id,
-    g,
-    "booking",
-    `followup:${f.id}`,
+  const child = (
+      await sql`SELECT plan_id FROM hub_requests WHERE id=${requestId}`
+    )[0],
+    link = new URL(await privateLink(child.plan_id)),
+    url = `${link.origin}/checkout/${requestId}?plan=${child.plan_id}${link.hash}`;
+  await notifyBooking(
+    requestId,
+    `followup-accepted:${f.id}`,
+    "Your follow-up itinerary is ready",
+    "Your accepted package is ready for checkout. Payment and guide acceptance are confirmed separately.",
   );
-  await sql`UPDATE guide_followups SET new_request_id=${created.id},status='accepted' WHERE id=${followupId} AND status='approved'`;
-  return { url: `/trip/${saved.id}#edit=${saved.editToken}` };
+  const guide = (await sql`SELECT data FROM guides WHERE id=${f.guide_id}`)[0];
+  if (guide)
+    await notify(
+      `guide-followup:${f.id}`,
+      guide.data.email,
+      "A traveller accepted your follow-up offer",
+      `Review the offered assignment in your guide workspace: ${siteUrl}/guide`,
+    );
+  await audit(a.actor, "followup.accept", requestId, {
+    followup: f.id,
+    version,
+  });
+  if (payNow)
+    try {
+      return {
+        ...(await pay(requestId, mode)),
+        planId: child.plan_id,
+        editToken: new URLSearchParams(link.hash.slice(1)).get("edit"),
+      };
+    } catch (error) {
+      if (!(error instanceof HttpError)) throw error;
+      return {
+        url,
+        message: error.message,
+        planId: child.plan_id,
+        editToken: new URLSearchParams(link.hash.slice(1)).get("edit"),
+      };
+    }
+  return {
+    url,
+    planId: child.plan_id,
+    editToken: new URLSearchParams(link.hash.slice(1)).get("edit"),
+  };
 }
 export async function publicDeals() {
   const sql = database();

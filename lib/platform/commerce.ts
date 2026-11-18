@@ -68,7 +68,7 @@ export async function financialLease<T>(id: string, run: () => Promise<T>) {
 export async function netAmount(id: string) {
   const sql = database(),
     r = (
-      await sql`SELECT r.*,q.amount_minor,q.currency AS quote_currency FROM hub_requests r JOIN hub_quotes q ON q.id=r.quote_id WHERE r.id=${id}`
+      await sql`SELECT r.*,q.amount_minor,q.currency AS quote_currency,q.plan AS quote_plan,q.deposit_percent,q.status AS quote_status FROM hub_requests r JOIN hub_quotes q ON q.id=r.quote_id WHERE r.id=${id}`
     )[0];
   if (!r) throw new HttpError(409, "Ask the manager for a final quote.");
   const c = (
@@ -191,25 +191,47 @@ export async function requireCheckout(id: string) {
 }
 export async function pay(id: string, mode: "full" | "deposit" | "arrival") {
   const n = await requireCheckout(id);
-  if (mode === "arrival" || n.total === 0) {
+  const target =
+    mode === "deposit"
+      ? Math.ceil((n.total * Number(n.row.deposit_percent)) / 100)
+      : n.total;
+  if (
+    ["confirmed", "completed"].includes(n.row.status) &&
+    target <= Number(n.row.paid_minor)
+  )
+    return { url: `/payment/${id}?plan=${n.row.plan_id}` };
+  if (mode === "arrival" || target <= Number(n.row.paid_minor)) {
     return financialLease(id, async () => {
-      const again = await requireCheckout(id);
-      if (again.total > 0 && mode !== "arrival")
+      const sql = database(),
+        again = await requireCheckout(id);
+      const required =
+        mode === "deposit"
+          ? Math.ceil((again.total * Number(again.row.deposit_percent)) / 100)
+          : again.total;
+      if (required > Number(again.row.paid_minor) && mode !== "arrival")
         throw new HttpError(409, "The amount changed.");
-      await confirmArrival(id, again.total === 0);
+      await confirmArrival(id, required <= Number(again.row.paid_minor));
       const applied = (
         await database()`SELECT platform_apply_discounts(${id}) AS ok`
       )[0].ok;
       if (!applied) throw new HttpError(409, "A code needs manager review.");
       if (again.total === 0)
-        await database()`UPDATE hub_requests SET payment_status='voucher-paid' WHERE id=${id}`;
+        await sql`UPDATE hub_requests SET payment_status='voucher-paid' WHERE id=${id}`;
+      else if (Number(again.row.paid_minor) >= again.total)
+        await sql`UPDATE hub_requests SET payment_status=CASE WHEN EXISTS(SELECT 1 FROM platform_cash WHERE request_id=${id}) THEN 'cash-paid' ELSE 'paid' END WHERE id=${id}`;
+      else if (Number(again.row.paid_minor) > 0)
+        await sql`UPDATE hub_requests SET payment_status=CASE WHEN EXISTS(SELECT 1 FROM platform_cash WHERE request_id=${id}) THEN 'cash-deposit' ELSE 'deposit-paid' END WHERE id=${id}`;
       await notifyBooking(
         id,
         `checkout-arrival:${n.row.quote_id}`,
         "Your Almaty booking is confirmed",
         again.total === 0
           ? "Your package is covered by the accepted discounts and voucher."
-          : "Your pay-on-arrival booking is confirmed.",
+          : Number(again.row.paid_minor) >= again.total
+            ? "Your accepted package is covered by the recorded payments; no additional payment is due."
+            : required <= Number(again.row.paid_minor)
+              ? "Your recorded deposit covers this accepted quote. The remaining balance stays due under its terms."
+              : "Your pay-on-arrival booking is confirmed.",
       );
       return { url: `/payment/${id}?plan=${n.row.plan_id}` };
     });
@@ -234,6 +256,58 @@ export async function sendPaymentLink(id: string, actor: string) {
     delivery: "queued",
   };
 }
+export async function recordInvoice(
+  invoice: Stripe.Invoice,
+  sessionId?: string,
+) {
+  if (invoice.status !== "paid") return false;
+  const sql = database(),
+    reference = invoice.metadata?.paymentReference;
+  if (!reference) return false;
+  const row = (
+    await sql`SELECT * FROM hub_payment_sessions WHERE invoice_reference=${reference}`
+  )[0];
+  // A fast provider event may arrive before the Checkout create response is
+  // saved. Retry signed events for our own requests rather than losing them.
+  if (!row) {
+    if (
+      invoice.metadata?.requestId &&
+      (
+        await sql`SELECT id FROM hub_requests WHERE id=${invoice.metadata.requestId}`
+      )[0]
+    )
+      throw new HttpError(503, "Invoice is awaiting its payment session.");
+    return false;
+  }
+  if (
+    (sessionId && row.id !== sessionId) ||
+    row.request_id !== invoice.metadata?.requestId ||
+    row.quote_id !== invoice.metadata?.quoteId ||
+    Number(row.amount_minor) !== invoice.total ||
+    invoice.amount_paid !== invoice.total ||
+    row.currency.toLowerCase() !== invoice.currency?.toLowerCase() ||
+    (row.invoice_id && row.invoice_id !== invoice.id)
+  )
+    throw new HttpError(
+      409,
+      "Invoice does not match its recorded card payment.",
+    );
+  const safe = (value?: string | null) => {
+    try {
+      const url = new URL(value || "");
+      return url.protocol === "https:" &&
+        (url.hostname === "stripe.com" || url.hostname.endsWith(".stripe.com"))
+        ? url.href
+        : null;
+    } catch {
+      return null;
+    }
+  };
+  await sql`UPDATE hub_payment_sessions SET invoice_id=${invoice.id},invoice_url=COALESCE(${safe(invoice.invoice_pdf)},invoice_url),invoice_hosted_url=COALESCE(${safe(invoice.hosted_invoice_url)},invoice_hosted_url),invoice_number=${invoice.number || null} WHERE id=${row.id}`;
+  // Invoice events enrich documents only. Only the signed checkout payment
+  // event may credit funds and confirm a booking.
+  return true;
+}
 export async function paymentEnriched(
   session: Stripe.Checkout.Session,
   service: Stripe,
@@ -243,6 +317,13 @@ export async function paymentEnriched(
       await sql`SELECT * FROM hub_payment_sessions WHERE id=${session.id}`
     )[0];
   if (!r) return;
+  if (session.invoice) {
+    const invoice =
+      typeof session.invoice === "string"
+        ? await service.invoices.retrieve(session.invoice)
+        : session.invoice;
+    await recordInvoice(invoice, session.id);
+  }
   let intent: Stripe.PaymentIntent | null = null;
   if (typeof session.payment_intent === "string")
     intent = await service.paymentIntents.retrieve(session.payment_intent, {
@@ -299,13 +380,32 @@ export async function cancelRefund(
           await commerceSettings(),
           r.quote_currency,
         );
-    if (r.status === "cancelled")
+    if (r.status === "cancelled" && r.payment_status !== "refund-review")
       throw new HttpError(
         409,
         "This package is already cancelled. Review its refund ledger.",
       );
-    const plan = (await getPlan(r.plan_id)).data;
-    const start = plan.startDate + "T00:00:00+05:00";
+    const contract = (
+      await sql`SELECT * FROM hub_quotes WHERE request_id=${id} AND (approved_at IS NOT NULL OR status='approved') ORDER BY COALESCE(approved_at,created_at) DESC LIMIT 1`
+    )[0];
+    if (!contract && Number(r.paid_minor) > 0)
+      throw new HttpError(
+        409,
+        "The accepted contract needs reconciliation before a refund.",
+      );
+    const contractTerms = contract
+      ? (
+          await sql`SELECT data FROM platform_quote_terms WHERE quote_id=${contract.id}`
+        )[0]?.data
+      : null;
+    if (contract && !contractTerms && Number(r.paid_minor) > 0)
+      throw new HttpError(
+        409,
+        "This legacy quote needs a manual cancellation-policy review before refunding.",
+      );
+    const policy = contractTerms || c;
+    const start =
+      (contract?.plan || r.quote_plan).startDate + "T00:00:00+05:00";
     const payments =
       await sql`SELECT * FROM hub_payment_sessions WHERE request_id=${id} AND status='paid' ORDER BY created_at`;
     const pending =
@@ -318,8 +418,8 @@ export async function cancelRefund(
     let remaining = cancellationRefund(
         Number(r.paid_minor),
         start,
-        Date.now(),
-        c,
+        r.cancelled_at ? new Date(r.cancelled_at).valueOf() : Date.now(),
+        policy,
       ),
       requested = 0;
     const cashPaid = Number(
@@ -388,9 +488,8 @@ export async function cancelRefund(
       }
     }
     await sql.transaction([
-      sql`UPDATE hub_requests SET status='cancelled',payment_status=CASE WHEN ${requested}>0 AND EXISTS(SELECT 1 FROM platform_refunds f WHERE f.request_id=${id} AND f.status IN ('requested','pending','needs-review')) THEN 'refund-pending' WHEN ${remaining}>0 AND ${cashPaid}>0 THEN 'cash-refund-review' WHEN ${requested}>0 AND paid_minor=0 THEN 'refunded' WHEN ${requested}>0 THEN 'partially-refunded' ELSE payment_status END,updated_at=now() WHERE id=${id}`,
-      sql`UPDATE hub_holds SET state='released' WHERE request_id=${id}`,
-      sql`UPDATE guide_assignments SET status='cancelled',updated_at=now() WHERE request_id=${id} AND status IN ('offered','accepted','started','completion_requested')`,
+      sql`SELECT platform_cancel_request(${id},${actor})`,
+      sql`UPDATE hub_requests SET status='cancelled',cancelled_at=COALESCE(cancelled_at,now()),payment_status=CASE WHEN ${requested}>0 AND EXISTS(SELECT 1 FROM platform_refunds f WHERE f.request_id=${id} AND f.status IN ('requested','pending','needs-review')) THEN 'refund-pending' WHEN ${remaining}>0 AND ${cashPaid}>0 THEN 'cash-refund-review' WHEN ${requested}>0 AND paid_minor=0 THEN 'refunded' WHEN ${requested}>0 THEN 'partially-refunded' WHEN ${remaining}=0 AND paid_minor>0 THEN 'no-refund-due' ELSE payment_status END,updated_at=now() WHERE id=${id}`,
     ]);
     await audit(actor, "booking.cancel", id, {
       requestedRefundMinor: requested,

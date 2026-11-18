@@ -1,6 +1,6 @@
 # November 19 platform extension
 
-Checkout/payment status, independent research and price review, guide profiles/invitations/calendars/matching, private trip chat/gallery/safety, owner payment/refund/transfer tools, assistant, bot hooks, deals/waitlists, loyalty and operations scheduling now extend the existing guide. Start with [Platform setup and practical limits](docs/PLATFORM-SETUP.md) and [UI state audit](docs/UI-STATE-AUDIT.md). Provider keys/eligibility remain required for real payments and message delivery. See the release report for actual verification; no browser accessibility score is claimed.
+Checkout/payment status, independent research and price review, guide profiles/invitations/calendars/matching, private trip chat/gallery/safety, owner payment/refund/transfer tools, assistant, bot hooks, deals/waitlists, loyalty and operations scheduling now extend the existing guide. Start with [Platform setup and practical limits](docs/PLATFORM-SETUP.md) and [UI state audit](docs/UI-STATE-AUDIT.md). Provider keys/eligibility remain required for real payments and message delivery. See the [November 19 release checks](docs/RELEASE-2026-11-19.md) for actual verification; no browser accessibility score is claimed.
 
 Client requests: **[Travel desk](https://almaty-travel-guide.vercel.app/admin/hub)**. Other owner workspaces: `/admin/research`, `/admin/guides`, `/admin/payments`. Public guides: `/guides`; invited guide workspace: `/guide`. No fictional guide profiles, restaurants, menus or prices are seeded.
 
@@ -36,14 +36,14 @@ Fonts and photos are served locally. No Google Fonts request, remote image key, 
 
 Live: https://almaty-travel-guide.vercel.app
 
-The Vercel project is connected to GitHub `main`; pushes trigger production builds. The production domain and daily-refresh secret are already configured. The durable daily update targets 05:00 Asia/Almaty, and current weather refreshes hourly through signed GitHub workflows. A separate Codex daily content review is active at 08:30 Asia/Almaty and requires the computer and desktop app to be running. See [operations](docs/OPERATIONS.md).
+The Vercel project is connected to GitHub `main`; pushes trigger production builds. The production domain and daily-refresh secret are already configured. The durable daily update targets 05:00 Asia/Almaty, and current weather refreshes hourly through signed GitHub workflows. Guide and platform operations run on a separate 15-minute workflow; these cloud jobs do not require this computer to be running. See [operations](docs/OPERATIONS.md).
 
 ## Deploy to Vercel
 
 1. Import `aslansaid69-coder/travel-guide` into Vercel. Select Next.js and Node 22. Repository root is the project root.
 2. Set `NEXT_PUBLIC_SITE_URL` to the final HTTPS domain. This controls canonical URLs, Open Graph URLs, robots.txt and sitemap.xml. Redeploy after changing it.
 3. Add a strong `CRON_SECRET` (for example, generate one using `openssl rand -hex 32`).
-4. The default email-app form needs no credentials. Only add Resend credentials if switching `data/site.json` contactMode to `server`.
+4. The default email-app footer needs no credentials. Add Resend with a verified sender for booking messages, invitations, owner digests and failure alerts. Switching `data/site.json` contactMode to `server` also uses it for contact submissions.
 5. Deploy. The workflows in `.github/workflows` call the daily and hourly update endpoints with GitHub OIDC. The daily target is **00:00 UTC / 05:00 Almaty**. GitHub may delay scheduled runs. `vercel.json` no longer schedules the older 07:00 cache-only cron. See [stage 2 setup](docs/STAGE-2-UPDATES.md) for QStash as an alternative.
 
 ## Deploy to Netlify
@@ -57,7 +57,7 @@ For Netlify, update the workflow destination URLs and NEXT_PUBLIC_SITE_URL to th
 | Setting                   | Purpose                                                                                           |
 | ------------------------- | ------------------------------------------------------------------------------------------------- |
 | `NEXT_PUBLIC_SITE_URL`    | Your deployed canonical HTTPS URL. Default is localhost for development.                          |
-| `RESEND_API_KEY`          | Optional server-only Resend email key; unused by email-app mode.                                  |
+| `RESEND_API_KEY`          | Server-only email key for booking messages/alerts; footer email-app mode needs no key.            |
 | `CONTACT_FROM`            | Sender on a domain verified in your Resend account.                                               |
 | `CONTACT_TO`              | Your inbox receiving contact submissions.                                                         |
 | `CRON_SECRET`             | Protects daily cache refresh; endpoint denies access when unset.                                  |
@@ -70,14 +70,15 @@ If enabling optional server email delivery, enable your host's rate limiting/bot
 ## Structure
 
 ```text
-app/                  Homepage, credits, SEO and API routes
-components/           Header, cameras, events, places, tips, contact
-lib/                  Event validation/feeds/date window, cache, contact validation
-data/                Curated, editable configuration (see below)
-public/images/        Locally hosted licensed Almaty photographs
-scripts/refresh-events.ts   Optional feed-to-JSON maintenance command
-tests/                Date-window, permission, parsing and contact tests
-docs/INTEGRATIONS.md   Camera investigation and source details
+app/                  Public, client, guide and staff pages; server API routes
+components/           Reusable guide, planner, CRM and platform UI
+lib/                  Source jobs, weather, hub, research, guides and commerce
+migrations/           Additive Postgres schema and transactional functions
+data/                 Curated camera/event/site configuration
+public/               Local licensed photos, fonts and PWA assets
+scripts/              Migrations, permitted feed refresh and isolated integration checks
+tests/                Source/security, weather, pricing and UI contrast checks
+docs/                 Setup, permissions, operations, architecture and release checks
 ```
 
 ## Weather and automatic updates — stage 2
@@ -86,7 +87,7 @@ The homepage now includes current conditions, seven forecast days, clothing advi
 
 Open-Meteo evaluation mode serves this prototype. Before commercial operation, set WEATHER_MODE=commercial and OPEN_METEO_API_KEY. Owner failure alerts use Resend after two consecutive failed runs; delivery requires RESEND_API_KEY, ALERT_FROM (verified sender) and ALERT_TO. Missing credentials remain explicit in the owner dashboard.
 
-See [full setup, source contracts, budget and testing checklist](docs/STAGE-2-UPDATES.md). Restaurant/menu/pricing adapters remain unconfigured until their later stages receive real data; no successful external refresh is claimed for them.
+See [full setup, source contracts, budget and testing checklist](docs/STAGE-2-UPDATES.md). Restaurant/menu/pricing refresh requires real partner data or a permitted source; approved owner entries remain available while a feed is unavailable. No external refresh is claimed for an unconfigured source.
 
 ## Cameras — upgraded stage 1
 
@@ -109,7 +110,7 @@ Staff env: `DATABASE_URL`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_COOKIE_SECRET`, `OWN
 
 Additional hosts require `CAMERA_ALLOWED_HOSTS` in Vercel; add exact approved operator/CDN hosts, never wildcard domains. The admin must record embedding permission for every added feed. To use QStash instead of GitHub scheduling, set the three `QSTASH_*` values from `.env.example`, run `npm run schedules:configure`, and disable the GitHub workflow; do not run both.
 
-See [architecture and stage gates](docs/UPGRADE-ARCHITECTURE.md) and [camera audit](docs/CAMERA-AUDIT.md). The larger travel-hub features are delivered in eight owner-confirmed stages. Stages 1–2 are implemented; stages 3–8 await their respective work and confirmation.
+See [architecture and stage gates](docs/UPGRADE-ARCHITECTURE.md) and [camera audit](docs/CAMERA-AUDIT.md). The original stage gates are historical; the owner subsequently requested one combined implementation. The travel hub and November 19 platform modules are included. Provider activation and the remaining validation limits are documented in [Platform setup](docs/PLATFORM-SETUP.md).
 
 ## Events
 

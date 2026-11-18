@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { database } from "@/lib/db";
-import { audit, catalog } from "@/lib/hub/store";
+import { audit, catalog, settings } from "@/lib/hub/store";
 import { HttpError } from "@/lib/hub/security";
 import { getWeather } from "@/lib/weather/read";
 import {
@@ -38,6 +38,8 @@ export async function tripData(request: Request, id: string) {
       id: r.id,
       status: r.status,
       paymentStatus: r.payment_status,
+      planNeedsApproval:
+        r.quoted_version !== null && r.quoted_version !== r.plan_version,
       planId: r.plan_id,
       guest:
         a.role === "guide"
@@ -70,10 +72,16 @@ export async function tripData(request: Request, id: string) {
     assets,
     weather,
     contactUnlocked: unlocked,
+    translationConfigured: !!(
+      process.env.TRAVEL_AI_URL &&
+      process.env.TRAVEL_AI_KEY &&
+      process.env.TRAVEL_AI_MODEL
+    ),
+    payOnArrival: (await settings()).payOnArrival,
     safety:
       await sql`SELECT id,kind,data,created_at,resolved_at FROM safety_events WHERE request_id=${id} ORDER BY created_at DESC LIMIT 20`,
     followups:
-      await sql`SELECT id,guide_id,data,status FROM guide_followups WHERE request_id=${id} AND status='approved' ORDER BY created_at DESC`,
+      await sql`SELECT id,guide_id,data,status FROM guide_followups WHERE request_id=${id} AND status IN ('approved','accepted') ORDER BY created_at DESC`,
     review: assignment
       ? (
           await sql`SELECT rating,body,status FROM guide_reviews WHERE assignment_id=${assignment.id}`

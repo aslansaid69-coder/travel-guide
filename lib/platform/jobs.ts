@@ -42,7 +42,7 @@ export async function platformTick(force = false) {
     const expired =
       await sql`UPDATE guide_assignments SET status='expired',updated_at=now() WHERE status='offered' AND expires_at<=now() RETURNING request_id`;
     const requests =
-      await sql`SELECT DISTINCT a.request_id FROM guide_assignments a JOIN hub_requests r ON r.id=a.request_id WHERE a.status IN ('declined','expired','reassigned') AND a.starts_at>now() AND r.status NOT IN ('cancelled','completed') AND NOT EXISTS(SELECT 1 FROM guide_assignments b WHERE b.request_id=a.request_id AND b.status IN ('offered','accepted','started','completion_requested')) LIMIT 3`;
+      await sql`SELECT DISTINCT a.request_id FROM guide_assignments a JOIN hub_requests r ON r.id=a.request_id WHERE a.status IN ('declined','expired','reassigned','schedule-changed') AND a.starts_at>now() AND r.status NOT IN ('cancelled','completed') AND NOT EXISTS(SELECT 1 FROM guide_assignments b WHERE b.request_id=a.request_id AND b.status IN ('offered','accepted','started','completion_requested')) LIMIT 3`;
     for (const r of requests)
       await offerGuide(r.request_id).catch(async () => {
         if (process.env.ALERT_TO)
@@ -150,7 +150,7 @@ export async function platformTick(force = false) {
         await sql`SELECT count(*)::int AS total FROM cameras WHERE status<>'online'`
       )[0].total,
       guideIssues = (
-        await sql`SELECT count(DISTINCT a.request_id)::int AS total FROM guide_assignments a JOIN hub_requests r ON r.id=a.request_id WHERE a.status IN ('expired','declined','reassigned') AND r.status NOT IN ('cancelled','completed') AND NOT EXISTS(SELECT 1 FROM guide_assignments b WHERE b.request_id=a.request_id AND b.status IN ('offered','accepted','started','completion_requested'))`
+        await sql`SELECT count(DISTINCT a.request_id)::int AS total FROM guide_assignments a JOIN hub_requests r ON r.id=a.request_id WHERE a.status IN ('expired','declined','reassigned','schedule-changed') AND r.status NOT IN ('cancelled','completed') AND NOT EXISTS(SELECT 1 FROM guide_assignments b WHERE b.request_id=a.request_id AND b.status IN ('offered','accepted','started','completion_requested'))`
       )[0].total;
     if (c.ownerDigest && process.env.ALERT_TO) {
       const body = `New requests (24 h): ${counts.new_requests}\nUnpaid/part-paid packages: ${counts.unpaid}\nTomorrow’s tours: ${tours}\nUnassigned guide requests: ${guideIssues}\nCameras requiring attention: ${cameras}\nWeather: ${weather?.advice?.cautions.join(" ") || "Check the latest forecast and timestamp."}\n${siteUrl}/admin/hub`;

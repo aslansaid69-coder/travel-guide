@@ -57,6 +57,8 @@ export function useResource(
     setMessage("");
     try {
       const result = await platform(path, input, key);
+      if (result.planId && result.editToken)
+        localStorage.setItem(`almaty-key-${result.planId}`, result.editToken);
       if (result.url && !(input as any)?.stay) {
         window.location.assign(result.url);
         return result;

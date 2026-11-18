@@ -59,6 +59,7 @@ import {
   publicDeals,
   createFollowup,
   acceptFollowup,
+  approveFollowup,
 } from "./extras";
 import { documentPdf, pdfResponse } from "./pdf";
 const json = (data: unknown) =>
@@ -150,7 +151,7 @@ export async function handlePlatform(request: Request, path: string[]) {
         documents:
           await sql`SELECT id,kind,data,created_at FROM platform_documents WHERE request_id=${id}`,
         payments:
-          await sql`SELECT id,amount_minor,currency,status,refunded_minor,receipt_url,created_at FROM hub_payment_sessions WHERE request_id=${id} ORDER BY created_at DESC`,
+          await sql`SELECT id,amount_minor,currency,status,refunded_minor,receipt_url,invoice_url,invoice_hosted_url,invoice_number,created_at FROM hub_payment_sessions WHERE request_id=${id} ORDER BY created_at DESC`,
       });
     }
     if (resource === "trip" && id) {
@@ -215,7 +216,7 @@ export async function handlePlatform(request: Request, path: string[]) {
     if (resource === "guide") {
       const a = await ownedGuide();
       const assignments =
-        await sql`SELECT a.*,r.status AS booking_status,r.guest,r.paid_minor,r.payment_status,p.data AS plan FROM guide_assignments a JOIN hub_requests r ON r.id=a.request_id JOIN hub_plans p ON p.id=r.plan_id WHERE a.guide_id=${a.row.id} ORDER BY a.starts_at DESC LIMIT 100`;
+        await sql`SELECT a.*,r.status AS booking_status,r.guest,r.paid_minor,r.payment_status,CASE WHEN r.status IN ('confirmed','completed') AND q.status='approved' THEN q.plan ELSE p.data END AS plan FROM guide_assignments a JOIN hub_requests r ON r.id=a.request_id JOIN hub_plans p ON p.id=r.plan_id LEFT JOIN hub_quotes q ON q.id=r.quote_id WHERE a.guide_id=${a.row.id} ORDER BY a.starts_at DESC LIMIT 100`;
       return json({
         guide: a.guide,
         connect: {
@@ -290,7 +291,7 @@ export async function handlePlatform(request: Request, path: string[]) {
           reviews:
             await sql`SELECT v.*,g.data->>'name' AS guide FROM guide_reviews v JOIN guide_assignments a ON a.id=v.assignment_id JOIN guides g ON g.id=a.guide_id ORDER BY v.created_at DESC LIMIT 50`,
           followups:
-            await sql`SELECT * FROM guide_followups WHERE status='pending' ORDER BY created_at DESC LIMIT 50`,
+            await sql`SELECT * FROM guide_followups WHERE status IN ('pending','approved') ORDER BY created_at DESC LIMIT 50`,
         });
       if (id === "commerce")
         return json({
@@ -456,7 +457,17 @@ export async function handlePlatform(request: Request, path: string[]) {
     if (b.action === "followup")
       return json(await createFollowup(request, id, b.plan));
     if (b.action === "accept-followup")
-      return json(await acceptFollowup(request, id, str(b.followupId, 120)));
+      return json(
+        await acceptFollowup(
+          request,
+          id,
+          str(b.followupId, 120),
+          str(b.offerVersion, 120),
+          b.acceptTerms === true,
+          z.enum(["full", "deposit", "arrival"]).parse(b.mode || "full"),
+          b.payNow === true,
+        ),
+      );
     if (b.action === "pair") {
       const { pair } = await import("./bots");
       return json(
@@ -662,7 +673,9 @@ export async function handlePlatform(request: Request, path: string[]) {
         return json({ ok: true });
       }
       if (b.action === "followup") {
-        await sql`UPDATE guide_followups SET status=${b.approved ? "approved" : "hidden"} WHERE id=${str(b.id, 120)} AND status='pending'`;
+        if (b.approved)
+          return json(await approveFollowup(str(b.id, 120), b.offer, staff.id));
+        await sql`UPDATE guide_followups SET status='hidden' WHERE id=${str(b.id, 120)} AND status IN ('pending','approved')`;
         return json({ ok: true });
       }
     }

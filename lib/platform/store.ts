@@ -23,7 +23,7 @@ export async function booking(
 ) {
   const sql = database();
   const r = (
-    await sql`SELECT r.*,p.data AS plan,p.version AS plan_version,p.client_id FROM hub_requests r JOIN hub_plans p ON p.id=r.plan_id WHERE r.id=${id}`
+    await sql`SELECT r.*,p.data AS plan,p.version AS plan_version,p.client_id,q.plan AS quote_plan,q.plan_version AS quoted_version FROM hub_requests r JOIN hub_plans p ON p.id=r.plan_id LEFT JOIN hub_quotes q ON q.id=r.quote_id WHERE r.id=${id}`
   )[0];
   if (!r) throw new HttpError(404, "Booking not found.");
   const staff = await staffSession();
@@ -37,6 +37,8 @@ export async function booking(
     const a = (
       await sql`SELECT a.*,g.user_id FROM guide_assignments a JOIN guides g ON g.id=a.guide_id WHERE a.request_id=${id} AND g.status<>'removed' AND g.user_id=${staff.id} AND a.status IN ('accepted','started','completion_requested','completed') ORDER BY a.created_at DESC LIMIT 1`
     )[0];
+    if (a && ["confirmed", "completed"].includes(r.status) && r.quote_plan)
+      r.plan = r.quote_plan;
     if (a && ["confirmed", "completed"].includes(r.status))
       return {
         request: r,
@@ -150,7 +152,7 @@ export async function notifyBooking(
       `${body}\nOpen your guide dashboard.`,
     );
   const links =
-    await sql`SELECT b.channel,b.address FROM bot_links b WHERE b.active=true AND b.consent=true AND (b.plan_id=${r.plan_id} OR b.user_id IN (SELECT g.user_id FROM guides g JOIN guide_assignments a ON a.guide_id=g.id WHERE a.request_id=${requestId} AND a.status IN ('accepted','started','completion_requested')))`;
+    await sql`SELECT b.channel,b.address FROM bot_links b WHERE b.active=true AND b.consent=true AND (b.plan_id=${r.plan_id} AND ${includeClient} OR b.user_id IN (SELECT g.user_id FROM guides g JOIN guide_assignments a ON a.guide_id=g.id WHERE a.request_id=${requestId} AND a.status IN ('accepted','started','completion_requested')))`;
   for (const b of links)
     await notify(
       `${id}:${b.channel}:${hash(b.address).slice(0, 12)}`,

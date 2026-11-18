@@ -14,11 +14,14 @@ import {
   quoteTerms,
   paymentEnriched,
   cancelRefund,
+  recordInvoice,
 } from "../lib/platform/commerce";
+import { approveFollowup, acceptFollowup } from "../lib/platform/extras";
 import { commerceDefaults } from "../lib/platform/types";
 import { documentPdf } from "../lib/platform/pdf";
 import { releaseEarnings } from "../lib/platform/payouts";
 import { upload, readAsset } from "../lib/platform/trips";
+import { handle as legacyHandle } from "../lib/hub/api";
 import { checkout } from "../lib/hub/bookings";
 if (process.env.INTEGRATION_BRANCH !== "platform-v2-test-2026-11-19")
   throw new Error("Use the isolated platform test branch only.");
@@ -34,6 +37,7 @@ const sql = database(),
   r2 = prefix + "-r2",
   r3 = prefix + "-r3",
   g1 = prefix + "-g",
+  followup = prefix + "-followup",
   guideUser = prefix + "-user",
   promo = "P-" + randomUUID().slice(0, 8).toUpperCase(),
   voucher = "V-" + randomUUID().slice(0, 8).toUpperCase();
@@ -131,6 +135,20 @@ try {
   check(
     "reassignment revokes the prior guide assignment before a replacement offer",
   );
+  const changedAssignment = winner + "-changed";
+  await sql`SELECT platform_offer_guide(${changedAssignment},${winner},${g1},${start},${end},1000,now()+interval '30 minutes')`;
+  await sql`SELECT platform_guide_action(${changedAssignment},${g1},'accept')`;
+  await assert.rejects(sql`SELECT platform_complete_request(${winner})`);
+  await sql`SELECT platform_schedule_change(${winner},${new Date(new Date(start).valueOf() + 86400000).toISOString()},${new Date(new Date(end).valueOf() + 86400000).toISOString()},'KZT')`;
+  assert.equal(
+    (
+      await sql`SELECT status FROM guide_assignments WHERE id=${changedAssignment}`
+    )[0].status,
+    "schedule-changed",
+  );
+  check(
+    "a changed quote schedule retires the old guide reservation and active guides prevent premature CRM completion",
+  );
   const now = new Date().toISOString(),
     expires = new Date(Date.now() + 86400000).toISOString();
   for (const c of [
@@ -209,13 +227,49 @@ try {
       },
     },
   };
+  process.env.STRIPE_INVOICE_ENABLED = "true";
   const result = await checkout(r3, "deposit", mock as any);
+  delete process.env.STRIPE_INVOICE_ENABLED;
   assert.equal(result.url, "https://checkout.stripe.test/session");
   assert.equal(created[0].data.line_items[0].price_data.unit_amount, 2700);
+  assert.equal(created[0].data.invoice_creation.enabled, true);
   await checkout(r3, "deposit", mock as any);
   assert.equal(created.length, 1);
   check(
     "hosted checkout charges the server-side discounted deposit and reuses the open session",
+  );
+  const invoice = {
+    id: prefix + "-invoice",
+    status: "paid",
+    total: 2700,
+    amount_paid: 2700,
+    currency: "kzt",
+    metadata: created[0].data.invoice_creation.invoice_data.metadata,
+    invoice_pdf: "https://pay.stripe.com/invoice/test/pdf",
+    hosted_invoice_url: "https://invoice.stripe.com/test",
+    number: "TEST-001",
+  };
+  await assert.rejects(
+    recordInvoice({ ...invoice, total: 9999 } as any),
+    /does not match/,
+  );
+  await recordInvoice(invoice as any);
+  await recordInvoice(invoice as any);
+  assert.equal(
+    Number(
+      (await sql`SELECT paid_minor FROM hub_requests WHERE id=${r3}`)[0]
+        .paid_minor,
+    ),
+    0,
+  );
+  assert.equal(
+    (
+      await sql`SELECT invoice_number FROM hub_payment_sessions WHERE request_id=${r3}`
+    )[0].invoice_number,
+    "TEST-001",
+  );
+  check(
+    "paid invoice documents match the exact server amount and cannot credit money or confirm a booking",
   );
   await sql`SELECT hub_apply_payment(${prefix + "-event"},${prefix + "-session"},2700,'kzt')`;
   const service = {
@@ -248,6 +302,23 @@ try {
   );
   check(
     "payment enrichment is idempotent, creates one acknowledgment and marks a partial deposit accurately",
+  );
+  await sql`UPDATE hub_requests SET status='quote-sent' WHERE id=${r3}`;
+  await pay(r3, "deposit");
+  assert.equal(
+    (await sql`SELECT payment_status FROM hub_requests WHERE id=${r3}`)[0]
+      .payment_status,
+    "deposit-paid",
+  );
+  assert.equal(
+    Number(
+      (await sql`SELECT paid_minor FROM hub_requests WHERE id=${r3}`)[0]
+        .paid_minor,
+    ),
+    2700,
+  );
+  check(
+    "an accepted updated package can reconfirm using its existing deposit without charging it twice",
   );
   await sql`UPDATE hub_requests SET status='completed' WHERE id=${r3}`;
   await sql`UPDATE hub_quotes SET expires_at=now()-interval '1 day' WHERE request_id=${r3}`;
@@ -490,6 +561,138 @@ try {
   check(
     "a late payment cannot reopen a cancellation or consume its expired credit",
   );
+  const legacyAssignment = r1 + "-legacy";
+  await sql`UPDATE hub_requests SET status='confirmed',payment_status='paid',cancelled_at=NULL WHERE id=${r1}`;
+  await sql`INSERT INTO guide_assignments(id,request_id,guide_id,status,starts_at,ends_at,expires_at,fee_minor,commission_percent,currency) VALUES(${legacyAssignment},${r1},${g1},'accepted',${start},${end},now()+interval '30 minutes',1000,20,'KZT')`;
+  const pastDate = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  await sql`UPDATE hub_quotes SET plan=jsonb_set(plan,'{startDate}',${JSON.stringify(pastDate)}::jsonb) WHERE id=${r1 + "-q"}`;
+  await sql`UPDATE hub_plans SET data=jsonb_set(data,'{startDate}','"2027-12-20"'::jsonb),version=version+1 WHERE id=${p.id}`;
+  await legacyHandle(
+    privateRequest("requests/" + r1, p.editToken, { action: "cancel" }),
+    ["requests", r1],
+  );
+  assert.equal(
+    (
+      await sql`SELECT status FROM guide_assignments WHERE id=${legacyAssignment}`
+    )[0].status,
+    "cancelled",
+  );
+  assert.ok(
+    (await sql`SELECT cancelled_at FROM hub_requests WHERE id=${r1}`)[0]
+      .cancelled_at,
+  );
+  const policyCancellation = await cancelRefund(
+    r1,
+    "test",
+    "Apply accepted quote policy",
+  );
+  assert.equal(policyCancellation.refundMinor, 0);
+  assert.equal(
+    (await sql`SELECT payment_status FROM hub_requests WHERE id=${r1}`)[0]
+      .payment_status,
+    "no-refund-due",
+  );
+  await legacyHandle(
+    privateRequest("requests/" + r1, p.editToken, { action: "cancel" }),
+    ["requests", r1],
+  );
+  assert.equal(
+    (await sql`SELECT payment_status FROM hub_requests WHERE id=${r1}`)[0]
+      .payment_status,
+    "no-refund-due",
+  );
+  check(
+    "legacy client cancellation releases the guide, uses accepted dates rather than editable dates, and cannot restart a resolved refund",
+  );
+  await assert.rejects(
+    handlePlatform(
+      privateRequest(`trip/${r3}`, p.editToken, { action: "followup", plan }),
+      ["trip", r3],
+    ),
+    /Only the assigned guide/,
+  );
+  const followupPlan = planSchema.parse({
+    ...plan,
+    startDate: new Date(new Date(date + "T12:00:00Z").valueOf() + 86400000)
+      .toISOString()
+      .slice(0, 10),
+  });
+  await sql`INSERT INTO guide_followups(id,request_id,guide_id,data) VALUES(${followup},${r3},${g1},${JSON.stringify({ plan: followupPlan })}::jsonb)`;
+  await approveFollowup(
+    followup,
+    {
+      plan: followupPlan,
+      amountMinor: 12000,
+      currency: "KZT",
+      depositPercent: 30,
+      terms: "Test final follow-up quote, including cancellation terms.",
+    },
+    "test-manager",
+  );
+  const version = (
+    await sql`SELECT data FROM guide_followups WHERE id=${followup}`
+  )[0].data.offerVersion;
+  await assert.rejects(
+    acceptFollowup(
+      privateRequest(`trip/${r3}`),
+      r3,
+      followup,
+      "old-version",
+      true,
+      "full",
+    ),
+    /offer changed/,
+  );
+  const accepted = await Promise.all(
+    [1, 2].map(() =>
+      acceptFollowup(
+        privateRequest(`trip/${r3}`),
+        r3,
+        followup,
+        version,
+        true,
+        "full",
+      ),
+    ),
+  );
+  const childId = new URL(accepted[0].url!).pathname.split("/").at(-1)!;
+  assert.equal(new URL(accepted[1].url!).pathname.split("/").at(-1), childId);
+  assert.equal(
+    (
+      await sql`SELECT count(*)::int AS n FROM hub_requests WHERE idempotency_key=${"followup:" + followup}`
+    )[0].n,
+    1,
+  );
+  assert.equal(
+    (
+      await sql`SELECT count(*)::int AS n FROM guide_assignments WHERE request_id=${childId}`
+    )[0].n,
+    1,
+  );
+  for (const result of accepted) {
+    const booking = await (
+      await handlePlatform(
+        privateRequest(`booking/${childId}`, result.editToken!),
+        ["booking", childId],
+      )
+    ).json();
+    assert.equal(booking.totalMinor, 12000);
+  }
+  await pay(childId, "arrival");
+  assert.equal(
+    (await sql`SELECT status FROM hub_requests WHERE id=${childId}`)[0].status,
+    "confirmed",
+  );
+  assert.equal(
+    Number(
+      (await sql`SELECT paid_minor FROM hub_requests WHERE id=${childId}`)[0]
+        .paid_minor,
+    ),
+    0,
+  );
+  check(
+    "manager-approved follow-up accepts one immutable offer under concurrent clicks, reserves one guide, and opens private checkout without faking payment",
+  );
   const bytes = await documentPdf(
     "Offline trip QA",
     ["English and Русский: Алматы", "Private trip example. Emergency: 112."],
@@ -505,6 +708,22 @@ try {
     `Platform integration: ${count} checks passed. No real messages or payments were sent.`,
   );
 } finally {
+  const child = (
+    await sql`SELECT r.id,r.plan_id FROM hub_requests r JOIN guide_followups f ON f.new_request_id=r.id WHERE f.id=${followup}`
+  )[0];
+  if (child) {
+    await sql`UPDATE guide_followups SET new_request_id=NULL WHERE id=${followup}`;
+    await sql`DELETE FROM guide_assignments WHERE request_id=${child.id}`;
+    await sql`DELETE FROM platform_checkout WHERE request_id=${child.id}`;
+    await sql`DELETE FROM hub_holds WHERE request_id=${child.id}`;
+    await sql`DELETE FROM platform_quote_terms WHERE quote_id IN (SELECT id FROM hub_quotes WHERE request_id=${child.id})`;
+    await sql`UPDATE hub_requests SET quote_id=NULL WHERE id=${child.id}`;
+    await sql`DELETE FROM hub_quotes WHERE request_id=${child.id}`;
+    await sql`DELETE FROM hub_messages WHERE request_id=${child.id}`;
+    await sql`DELETE FROM hub_requests WHERE id=${child.id}`;
+    await sql`DELETE FROM hub_access_links WHERE plan_id=${child.plan_id}`;
+    await sql`DELETE FROM hub_plans WHERE id=${child.plan_id}`;
+  }
   await sql`DELETE FROM transfer_reversals WHERE refund_id IN (SELECT id FROM platform_refunds WHERE request_id IN (${r1},${r2},${r3}))`;
   for (const table of [
     "guide_transfers",

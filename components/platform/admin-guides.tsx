@@ -530,27 +530,122 @@ export function GuidesAdmin() {
           </div>
         ))}
         {s.data?.followups.map((f: any) => (
-          <div key={f.id} className="platform-evidence">
-            <p>
-              {f.data.plan.title} · Request {f.request_id}
+          <article key={f.id} className="platform-evidence">
+            <h3>
+              {f.data.plan.title} · {f.status}
+            </h3>
+            <p className="platform-muted">
+              Review dates, service slot IDs, guide allocation and inclusions.
+              The traveller accepts this exact quote and cancellation policy
+              before checkout.
             </p>
-            <div className="platform-actions">
-              <Button
-                onClick={() =>
-                  void s.run({ action: "followup", id: f.id, approved: true })
+            <form
+              className="platform-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                try {
+                  const form = new FormData(e.currentTarget),
+                    plan = JSON.parse(String(form.get("plan")));
+                  plan.startDate = String(form.get("date"));
+                  void s.run({
+                    action: "followup",
+                    id: f.id,
+                    approved: true,
+                    offer: {
+                      plan,
+                      amountMinor: Math.round(Number(form.get("amount")) * 100),
+                      currency: form.get("currency"),
+                      depositPercent: Number(form.get("deposit")),
+                      terms: form.get("terms"),
+                    },
+                  });
+                } catch {
+                  s.setMessage("Use valid itinerary JSON.");
                 }
-              >
-                Approve follow-up request
-              </Button>
-              <Button
-                onClick={() =>
-                  void s.run({ action: "followup", id: f.id, approved: false })
-                }
-              >
-                Hide
-              </Button>
-            </div>
-          </div>
+              }}
+            >
+              <div className="platform-form-row">
+                <Field label="New start date">
+                  <input
+                    name="date"
+                    type="date"
+                    required
+                    defaultValue={f.data.plan.startDate}
+                  />
+                </Field>
+                <Field label="Final package total (major units)">
+                  <input
+                    name="amount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    required
+                    defaultValue={f.data.quote?.amountMinor / 100 || ""}
+                  />
+                </Field>
+                <Field label="Settlement currency">
+                  <select
+                    name="currency"
+                    defaultValue={
+                      f.data.quote?.currency ||
+                      s.data.guides.find((g: any) => g.id === f.guide_id)?.data
+                        .currency ||
+                      "KZT"
+                    }
+                  >
+                    {["KZT", "USD", "EUR", "RUB", "GBP"].map((c) => (
+                      <option key={c}>{c}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Deposit (%)">
+                  <input
+                    name="deposit"
+                    type="number"
+                    min="1"
+                    max="100"
+                    defaultValue={f.data.quote?.depositPercent || 30}
+                    required
+                  />
+                </Field>
+              </div>
+              <Field label="Itinerary JSON · choose valid new service slots where needed">
+                <textarea
+                  name="plan"
+                  className="platform-code"
+                  rows={10}
+                  defaultValue={JSON.stringify(f.data.plan, null, 2)}
+                  required
+                />
+              </Field>
+              <Field label="Confirmed inclusions and quote terms">
+                <textarea
+                  name="terms"
+                  minLength={10}
+                  maxLength={5000}
+                  required
+                  defaultValue={f.data.quote?.terms || ""}
+                />
+              </Field>
+              <div className="platform-actions">
+                <Button primary busy={s.busy}>
+                  Publish final follow-up offer
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() =>
+                    void s.run({
+                      action: "followup",
+                      id: f.id,
+                      approved: false,
+                    })
+                  }
+                >
+                  Hide proposal
+                </Button>
+              </div>
+            </form>
+          </article>
         ))}
       </section>
     </Shell>
