@@ -1,4 +1,5 @@
 "use client";
+import { ThemeToggle } from "@/components/ui/theme";
 import { T, LanguageSwitch } from "@/components/hub/language";
 import { useState } from "react";
 import { MountainSnow, ArrowUpRight, Menu, X } from "lucide-react";
@@ -31,7 +32,7 @@ export function Header() {
           <a href="/explore">
             <T>Explore</T>
           </a>
-          <LanguageSwitch />
+          <LanguageSwitch /><ThemeToggle/>
         </nav>
         <a className="nav-cta" href="/plan">
           <T>Plan your trip</T> <ArrowUpRight size={17} />
@@ -69,7 +70,7 @@ export function Header() {
           <a href="/explore" onClick={() => setOpen(false)}>
             <T>Explore</T>
           </a>
-          <LanguageSwitch />
+          <LanguageSwitch /><ThemeToggle/>
         </nav>
       )}
     </header>

@@ -1,0 +1,7 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
+const css=readFileSync(new URL('../app/styles/controls.css',import.meta.url),'utf8');
+const light=Object.fromEntries([...css.match(/:root\s*\{([^}]+)\}/)![1].matchAll(/(--[\w-]+):\s*(#[\da-f]{6})/gi)].map(m=>[m[1],m[2]]));
+const dark={...light,...Object.fromEntries([...css.match(/:root\[data-theme=dark\]\s*\{([^}]+)\}/)![1].matchAll(/(--[\w-]+):\s*(#[\da-f]{6})/gi)].map(m=>[m[1],m[2]]))};
+function luminance(h:string){const c=h.slice(1).match(/../g)!.map(v=>parseInt(v,16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);return c[0]*.2126+c[1]*.7152+c[2]*.0722;}
+function ratio(a:string,b:string){const x=luminance(a),y=luminance(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);}
+for(const [theme,tokens]of Object.entries({light,dark})){test(`${theme} interactive state tokens meet text/border contrast thresholds`,()=>{for(const [fg,bg,minimum]of [['--control-fg','--control-bg',4.5],['--control-hover-fg','--control-hover-bg',4.5],['--control-selected-fg','--control-selected-bg',4.5],['--control-disabled-fg','--control-disabled-bg',4.5],['--accent-fg','--accent-bg',4.5],['--accent-fg','--accent-hover',4.5],['--text-secondary','--surface',4.5],['--control-border','--surface',3],['--control-focus','--surface',3]] as const){const r=ratio(tokens[fg],tokens[bg]);assert(r>=minimum,`${fg} / ${bg}: ${r.toFixed(2)} < ${minimum}`);}});}

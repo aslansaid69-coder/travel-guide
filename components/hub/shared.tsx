@@ -1,4 +1,5 @@
 "use client";
+import { ThemeToggle } from "@/components/ui/theme";
 import { useEffect, useState } from "react";
 import { MountainSnow, ArrowUpRight } from "lucide-react";
 import { LanguageSwitch, T, useT } from "./language";
@@ -22,7 +23,7 @@ export function HubHeader() {
         <a href="/account">
           <T>My plans</T>
         </a>
-        <LanguageSwitch />
+        <LanguageSwitch /><ThemeToggle/>
       </nav>
     </header>
   );
