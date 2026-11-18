@@ -101,6 +101,11 @@ export function HubAdmin() {
           </button>
         </div>
       </div>
+      <nav className="platform-subnav" aria-label="Extended travel desk">
+        <a href="/admin/research">Internet research</a>
+        <a href="/admin/guides">Guides & assignments</a>
+        <a href="/admin/payments">Payments & operations</a>
+      </nav>
       <nav className="hub-admin-tabs" aria-label="Workspace sections">
         {tabs.map((name) => (
           <button
@@ -1233,6 +1238,9 @@ function CatalogEditor({
             sort: Number(f.get("sort")),
             outdoor: f.get("outdoor") === "on",
             bookable: f.get("bookable") === "on",
+            serviceDepositPercent: f.get("serviceDepositPercent")
+              ? Number(f.get("serviceDepositPercent"))
+              : undefined,
             closed: f.get("closed") === "on",
             verifiedAt: new Date().toISOString(),
             schedule,
@@ -1337,6 +1345,17 @@ function CatalogEditor({
           </label>
         ))}
       </div>
+      <label>
+        Minimum card deposit for this service (%)
+        <input
+          type="number"
+          name="serviceDepositPercent"
+          min="1"
+          max="100"
+          defaultValue={item.serviceDepositPercent}
+          placeholder="Use the package default"
+        />
+      </label>
       <h3>Verified weekly hours · Almaty time</h3>
       <p className="hub-caption">
         Leave both times empty when unknown. “Closed” is an explicit closure for

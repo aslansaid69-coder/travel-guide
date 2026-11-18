@@ -74,6 +74,10 @@ export function CatalogCard({
             </span>
           )}
         </div>
+        {item.address && <p className="hub-caption">{item.address}</p>}
+        {item.accessibility && (
+          <p className="hub-caption">{item.accessibility}</p>
+        )}
         {item.hours && <p className="hub-caption">{item.hours}</p>}
         <p className="hub-card-price">
           {p
@@ -133,6 +137,59 @@ export function CatalogCard({
           )}
           {item.verifiedAt && ` · ${item.verifiedAt.slice(0, 10)}`}
         </p>
+        {lang === "ru" &&
+          (item.researchEvidence?.descriptionRu as any)?.evidence?.url && (
+            <p className="hub-caption">
+              <a
+                href={
+                  (item.researchEvidence?.descriptionRu as any).evidence.url
+                }
+                target="_blank"
+                rel="noreferrer"
+              >
+                Источник русского текста ·{" "}
+                {(item.researchEvidence?.descriptionRu as any).evidence.source}{" "}
+                ·{" "}
+                {(item.researchEvidence?.descriptionRu as any).evidence.licence}
+              </a>
+            </p>
+          )}
+        {item.imageCredit && (
+          <p className="hub-caption">
+            Photo: {item.imageCredit.author} ·{" "}
+            <a
+              href={item.imageCredit.sourceUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Wikimedia Commons
+            </a>{" "}
+            ·{" "}
+            <a
+              href={item.imageCredit.licenceUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {item.imageCredit.licence}
+            </a>
+          </p>
+        )}
+        {(item.researchEvidence?.price as any)?.evidence?.url && (
+          <p className="hub-caption">
+            <a
+              href={(item.researchEvidence?.price as any).evidence.url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Price source ↗
+            </a>{" "}
+            · checked{" "}
+            {(item.researchEvidence?.price as any).evidence.checkedAt?.slice(
+              0,
+              10,
+            )}
+          </p>
+        )}
         {onAdd ? (
           <button className="button button-accent" onClick={() => onAdd(item)}>
             <Plus size={15} />

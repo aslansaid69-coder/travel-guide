@@ -3,7 +3,7 @@ import { Receiver } from "@upstash/qstash";
 import { githubScheduleToken } from "@/lib/cameras/scheduler-auth";
 export async function schedulerAllowed(
   request: Request,
-  job: "daily" | "weather",
+  job: "daily" | "weather" | "platform",
 ) {
   const auth = request.headers.get("authorization") || "";
   const actual = Buffer.from(auth),

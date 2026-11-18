@@ -95,6 +95,7 @@ export async function handle(request: Request, path: string[]) {
           groupThreshold: conf.groupThreshold,
           groupDiscount: conf.groupDiscount,
           seasonal: conf.seasonal,
+          weekdayAdjustments: conf.weekdayAdjustments,
           transportBase: conf.transportBase,
           transportPerKm: conf.transportPerKm,
           transportConfirmed: conf.transportConfirmed,
@@ -337,8 +338,9 @@ export async function handle(request: Request, path: string[]) {
       return json({ ok: true });
     }
     if (b.action === "checkout")
-      return json(await checkout(id, b.mode === "full" ? "full" : "deposit"));
-    if (b.action === "arrival") return json(await confirmArrival(id));
+      return json({ url: `/checkout/${id}?plan=${r.plan_id}` });
+    if (b.action === "arrival")
+      return json({ url: `/checkout/${id}?plan=${r.plan_id}` });
     if (b.action === "cancel") {
       await sql.transaction([
         sql`UPDATE hub_requests SET status='cancelled',payment_status=CASE WHEN paid_minor>0 THEN 'refund-review' ELSE payment_status END,updated_at=now() WHERE id=${id}`,
@@ -510,12 +512,27 @@ export async function handle(request: Request, path: string[]) {
         );
       const items = await catalog();
       await planSlots(plan, items);
+      const minimumDeposit = Math.max(
+        ...plan.days.flatMap((day) =>
+          day.stops.map(
+            (stop) =>
+              items.find((item) => item.id === stop.itemId)
+                ?.serviceDepositPercent || 1,
+          ),
+        ),
+      );
+      if (deposit < minimumDeposit)
+        throw new HttpError(
+          400,
+          `A selected service requires at least ${minimumDeposit}% card deposit.`,
+        );
       const breakdown = estimate(plan, items, await settings(), await rates());
       const quoteId = randomUUID();
       const newVersion = await savePlan(r.plan_id, plan, p.version);
       await sql.transaction([
         sql`UPDATE hub_quotes SET status='superseded' WHERE request_id=${r.id} AND status IN ('pending','approved')`,
         sql`INSERT INTO hub_quotes(id,request_id,plan_version,plan,breakdown,amount_minor,currency,deposit_percent,terms) VALUES(${quoteId},${r.id},${newVersion},${JSON.stringify(plan)}::jsonb,${JSON.stringify({ estimate: breakdown, adjustmentNote: value(b.adjustmentNote || "", 1000) })}::jsonb,${amount},${currency},${deposit},${terms})`,
+        sql`INSERT INTO platform_quote_terms(quote_id,data) VALUES(${quoteId},${JSON.stringify((await import("@/lib/platform/commerce")).quoteTerms(amount, await (await import("@/lib/platform/store")).commerceSettings(), currency))}::jsonb)`,
         sql`UPDATE hub_requests SET quote_id=${quoteId},currency=${currency},status='quote-sent',version=version+1,contacted_at=COALESCE(contacted_at,now()),updated_at=now() WHERE id=${r.id}`,
       ]);
       await audit(staff.id, "quote.send", r.id, {

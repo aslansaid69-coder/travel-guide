@@ -12,7 +12,9 @@
     "db:migrate": "node --env-file=.env.local --import tsx scripts/migrate.ts",
     "schedules:configure": "node --env-file=.env.local --import tsx scripts/configure-schedules.ts",
     "test:updates:integration": "node --env-file=.env.stage2-test --import tsx scripts/test-updates-integration.ts",
-    "test:hub:integration": "node --env-file=.env.stage2-test --import tsx scripts/test-hub-integration.ts"
+    "test:hub:integration": "node --env-file=.env.stage2-test --import tsx scripts/test-hub-integration.ts",
+    "test:platform:integration": "node --env-file=.env.platform-test --import tsx scripts/test-platform-integration.ts",
+    "test:platform:http": "node --env-file=.env.platform-test --import tsx scripts/test-platform-http.ts"
   },
   "dependencies": {
     "@fontsource/dm-serif-display": "^5.2.5",
@@ -31,6 +33,7 @@
     "pdf-lib": "^1.17.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",
+    "sharp": "0.35.5",
     "stripe": "^23.1.0",
     "zod": "^4.6.7"
   },

@@ -2,6 +2,7 @@
 import { createAuthClient } from "@neon/auth/next";
 import { useEffect, useState } from "react";
 import { api } from "./shared";
+import { Loyalty } from "@/components/platform/extras";
 import { useT } from "./language";
 export function Account() {
   const [plans, setPlans] = useState<any[]>([]),
@@ -31,6 +32,7 @@ export function Account() {
           </article>
         ))}
       </div>
+      <Loyalty/>
       <button
         onClick={async () => {
           const result = await createAuthClient().signOut();

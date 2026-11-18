@@ -3,10 +3,12 @@ import localFont from "next/font/local";
 import { siteUrl } from "@/lib/site";
 import "./globals.css";
 import "./styles/controls.css";
+import "./styles/platform.css";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import { LanguageProvider } from "@/components/hub/language";
+import { TravelAssistant } from "@/components/platform/extras";
 import { Consent } from "@/components/hub/shared";
 const inter = localFont({
   src: [
@@ -86,6 +88,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <LanguageProvider>
           {children}
           <Consent />
+          <TravelAssistant />
         </LanguageProvider>
       </body>
     </html>

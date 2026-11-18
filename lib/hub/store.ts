@@ -21,7 +21,18 @@ export async function catalog(all = false): Promise<CatalogItem[]> {
 }
 export async function settings(): Promise<HubSettings> {
   const rows = await database()`SELECT data FROM hub_settings WHERE id=true`;
-  return rows[0] ? settingsSchema.parse(rows[0].data) : defaultSettings;
+  const commerce =
+    await database()`SELECT data FROM platform_settings WHERE id=true`.catch(
+      () => [],
+    );
+  const pricing = commerce[0]?.data;
+  return settingsSchema.parse({
+    ...defaultSettings,
+    ...rows[0]?.data,
+    weekdayAdjustments: pricing?.dynamicPricing
+      ? pricing.weekdayAdjustments
+      : {},
+  });
 }
 export async function rates(): Promise<Rates | null> {
   const rows =

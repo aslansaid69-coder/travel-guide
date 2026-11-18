@@ -160,6 +160,37 @@ export function Planner({ initial, id }: { initial?: Plan; id?: string }) {
     };
   }, [id]);
   useEffect(() => {
+    if (!ready || id || !items.length) return;
+    const params = new URLSearchParams(location.search),
+      guide = params.get("guide"),
+      add = params.get("add");
+    const item = items.find((i) => i.id === add);
+    if (guide) setPlan((p) => ({ ...p, preferredGuideId: guide }));
+    if (item) {
+      setPlan((p) => ({
+        ...p,
+        days: p.days.map((d, i) =>
+          i
+            ? d
+            : {
+                stops: [
+                  ...d.stops,
+                  {
+                    id: crypto.randomUUID(),
+                    itemId: item.id,
+                    start: "10:00",
+                    duration: item.duration,
+                    note: "",
+                  },
+                ],
+              },
+        ),
+      }));
+      setWizard(false);
+    }
+    if (guide || add) history.replaceState(null, "", location.pathname);
+  }, [ready, id, items]);
+  useEffect(() => {
     if (ready && canEdit)
       localStorage.setItem("almaty-draft", JSON.stringify({ plan, saved }));
   }, [plan, saved, ready, canEdit]);
@@ -1005,6 +1036,14 @@ export function Planner({ initial, id }: { initial?: Plan; id?: string }) {
                   >
                     {t("Copy private edit link")}
                   </button>
+                )}
+                {requestId && (
+                  <a
+                    className="button button-outline"
+                    href={`/tour/${requestId}?plan=${saved.id}`}
+                  >
+                    Open private trip & guide chat
+                  </a>
                 )}
                 <a href={`/api/hub/plans/${saved.id}/pdf`}>{t("PDF export")}</a>
               </>

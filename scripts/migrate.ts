@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { database } from "../lib/db";
 import cameras from "../data/cameras.json";
 import { statements } from "../lib/hub/migrate";
+import { ensureCommerce } from "../lib/platform/store";
 import { seedCatalog } from "../lib/hub/seed";
 // DDL uses a direct Neon connection; runtime app traffic keeps the pooled URL.
 process.env.DATABASE_URL =
@@ -14,6 +15,7 @@ for (const file of [
   "003-travel-hub.sql",
   "004-discovery-review.sql",
   "005-inventory-guards.sql",
+  "006-platform.sql",
 ]) {
   const migration = await readFile(
     new URL(`../migrations/${file}`, import.meta.url),
@@ -24,4 +26,5 @@ for (const file of [
 for (const camera of cameras)
   await sql`INSERT INTO cameras(id,config) VALUES(${camera.id},${JSON.stringify(camera)}::jsonb) ON CONFLICT(id) DO NOTHING`;
 await seedCatalog();
+await ensureCommerce();
 console.log("Migrations applied; approved cameras and guide places retained.");

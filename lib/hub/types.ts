@@ -90,6 +90,18 @@ export const itemSchema = z.object({
   sort: z.number().int().min(-10000).max(10000).default(0),
   status: z.enum(["approved", "pending", "hidden"]).default("pending"),
   verifiedAt: text(40).default(""),
+  address: text(500).default(""),
+  accessibility: text(1000).default(""),
+  imageCredit: z
+    .object({
+      author: text(500),
+      sourceUrl: text(800),
+      licence: text(200),
+      licenceUrl: text(800),
+    })
+    .optional(),
+  researchEvidence: z.record(z.string(), z.unknown()).optional(),
+  serviceDepositPercent: z.number().int().min(1).max(100).optional(),
 });
 export type CatalogItem = z.infer<typeof itemSchema>;
 export const stopSchema = z.object({
@@ -117,6 +129,7 @@ export const planSchema = z
     interests: z.array(text(50)).max(10).default([]),
     budget: z.enum(["easy", "balanced", "premium"]).default("balanced"),
     currency: currencySchema.default("KZT"),
+    preferredGuideId: text(120).optional(),
     days: z
       .array(z.object({ stops: z.array(stopSchema).max(25) }))
       .min(1)
@@ -154,6 +167,9 @@ export const settingsSchema = z.object({
     )
     .max(20)
     .default([]),
+  weekdayAdjustments: z
+    .record(z.string(), z.number().min(-50).max(100))
+    .default({}),
   transportBase: z.number().int().min(0).max(1000000).default(0),
   transportPerKm: z.number().int().min(0).max(100000).default(0),
   transportConfirmed: z.boolean().default(false),
@@ -188,7 +204,7 @@ export type Rates = {
 export type Staff = {
   id: string;
   email: string;
-  role: "owner" | "manager" | "partner";
+  role: "owner" | "manager" | "partner" | "guide";
   restaurantIds: string[];
   languages: string[];
 };

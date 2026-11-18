@@ -160,7 +160,16 @@ export function estimate(
         (guests >= settings.groupThreshold
           ? 1 - settings.groupDiscount / 100
           : 1) *
-        season;
+        season *
+        (1 +
+          (settings.weekdayAdjustments?.[
+            String(
+              new Date(
+                dayDate(plan.startDate, index) + "T12:00:00+05:00",
+              ).getUTCDay(),
+            )
+          ] || 0) /
+            100);
       lines.push({
         id: stop.id,
         day: index,

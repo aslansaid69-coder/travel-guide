@@ -23,7 +23,9 @@ export function HubHeader() {
         <a href="/account">
           <T>My plans</T>
         </a>
-        <LanguageSwitch /><ThemeToggle/>
+        <a href="/guides">Guides</a>
+        <LanguageSwitch />
+        <ThemeToggle />
       </nav>
     </header>
   );
@@ -37,6 +39,9 @@ export function HubFooter() {
       <a href="/emergency">
         <T>Emergency help</T>
       </a>
+      <a href="/terms">Terms</a>
+      <a href="/deals">Deals</a>
+      <a href="/guide">Guide workspace</a>
       <a href="/privacy">
         <T>Privacy</T>
       </a>

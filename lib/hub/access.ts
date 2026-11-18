@@ -25,7 +25,7 @@ export async function staffSession(): Promise<Staff | null> {
   if (!user) return null;
   const rows =
     await database()`SELECT s.role,p.restaurant_ids,p.languages FROM staff_roles s LEFT JOIN hub_staff_profiles p ON p.user_id=s.user_id WHERE s.user_id=${user.id}`;
-  if (!rows.length || !["manager", "partner"].includes(rows[0].role))
+  if (!rows.length || !["manager", "partner", "guide"].includes(rows[0].role))
     return null;
   return {
     ...user,

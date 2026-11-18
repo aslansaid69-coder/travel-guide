@@ -13,7 +13,7 @@ import {
   rates,
   privateLink,
 } from "./store";
-import { HttpError } from "./security";
+import { HttpError, hash } from "./security";
 export const stripe = () => {
   if (!process.env.STRIPE_SECRET_KEY)
     throw new HttpError(
@@ -165,7 +165,8 @@ async function prepareCheckout(
     !r ||
     r.status === "cancelled" ||
     r.quote_status !== "approved" ||
-    new Date(r.expires_at).valueOf() < Date.now()
+    (new Date(r.expires_at).valueOf() < Date.now() &&
+      !["confirmed", "completed"].includes(r.status))
   )
     throw new HttpError(409, "Approve a current final quote before paying.");
   const p = await getPlan(r.plan_id);
@@ -174,10 +175,13 @@ async function prepareCheckout(
       409,
       "Your plan changed. Ask the manager for a new quote.",
     );
+  const { total, revision } = await (
+    await import("@/lib/platform/commerce")
+  ).requireCheckout(requestId);
   const due =
     mode === "deposit"
-      ? Math.ceil((Number(r.amount_minor) * Number(r.deposit_percent)) / 100)
-      : Number(r.amount_minor);
+      ? Math.ceil((total * Number(r.deposit_percent)) / 100)
+      : total;
   const amount = Math.max(0, due - Number(r.paid_minor));
   if (!amount) throw new HttpError(409, "This amount has already been paid.");
   const existing =
@@ -199,15 +203,23 @@ async function prepareCheckout(
     }
     await sql`UPDATE hub_payment_sessions SET status='expired' WHERE id=${saved.id} AND status='created'`;
   }
-  const items = await catalog();
-  const selected = await planSlots(r.quote_plan, items, true);
-  await sql`SELECT hub_reserve(${requestId},${JSON.stringify(selected)}::jsonb,${r.quote_plan.adults + r.quote_plan.children},${r.status === "confirmed"})`;
+  // An established package can settle its balance after the tour. Its existing
+  // reservation must not be released/re-created or checked as a new past slot.
+  if (!["confirmed", "completed"].includes(r.status)) {
+    const items = await catalog();
+    const selected = await planSlots(r.quote_plan, items, true);
+    await sql`SELECT hub_reserve(${requestId},${JSON.stringify(selected)}::jsonb,${r.quote_plan.adults + r.quote_plan.children},false)`;
+  }
   const bucket = Math.floor(Date.now() / 1800000);
   const session = await service.checkout.sessions.create(
     {
       mode: "payment",
       client_reference_id: requestId,
       metadata: { requestId, quoteId: r.quote_id },
+      payment_intent_data: {
+        transfer_group: `booking:${requestId}`,
+        metadata: { requestId, quoteId: r.quote_id },
+      },
       customer_email: r.guest.email,
       line_items: [
         {
@@ -224,19 +236,19 @@ async function prepareCheckout(
         },
       ],
       expires_at: Math.floor(Date.now() / 1000) + 1800,
-      success_url: `${siteUrl}/trip/${r.plan_id}?payment=received`,
-      cancel_url: `${siteUrl}/trip/${r.plan_id}?payment=cancelled`,
+      success_url: `${siteUrl}/payment/${requestId}?plan=${r.plan_id}`,
+      cancel_url: `${siteUrl}/checkout/${requestId}?plan=${r.plan_id}&payment=cancelled`,
     },
     {
-      idempotencyKey: `checkout:${requestId}:${r.quote_id}:${mode}:${Number(r.paid_minor)}:${bucket}`,
+      idempotencyKey: `checkout:${requestId}:${r.quote_id}:${mode}:${Number(r.paid_minor)}:${total}:${bucket}:${hash(revision).slice(0, 12)}`,
     },
   );
   await sql`INSERT INTO hub_payment_sessions(id,request_id,quote_id,amount_minor,currency) VALUES(${session.id},${requestId},${r.quote_id},${amount},${r.quote_currency}) ON CONFLICT DO NOTHING`;
   return { url: session.url };
 }
-export async function confirmArrival(requestId: string) {
+export async function confirmArrival(requestId: string, fullyCovered = false) {
   const sql = database();
-  if (!(await settings()).payOnArrival)
+  if (!fullyCovered && !(await settings()).payOnArrival)
     throw new HttpError(409, "Pay on arrival is disabled.");
   const r = (
     await sql`SELECT r.*,q.plan,q.status AS quote_status,q.expires_at,q.plan_version FROM hub_requests r JOIN hub_quotes q ON q.id=r.quote_id WHERE r.id=${requestId}`

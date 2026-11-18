@@ -4,7 +4,7 @@ const jwks = createRemoteJWKSet(
 );
 export function allowedWorkflow(
   p: JWTPayload,
-  job: "cameras" | "daily" | "weather" = "cameras",
+  job: "cameras" | "daily" | "weather" | "platform" = "cameras",
 ) {
   return (
     p.repository_id === "1458725366" &&
@@ -12,13 +12,13 @@ export function allowedWorkflow(
     p.repository === "aslansaid69-coder/travel-guide" &&
     p.ref === "refs/heads/main" &&
     p.workflow_ref ===
-      `aslansaid69-coder/travel-guide/.github/workflows/${job === "cameras" ? "camera-health" : job === "daily" ? "daily-updates" : "weather-refresh"}.yml@refs/heads/main` &&
+      `aslansaid69-coder/travel-guide/.github/workflows/${job === "cameras" ? "camera-health" : job === "daily" ? "daily-updates" : job === "platform" ? "platform-operations" : "weather-refresh"}.yml@refs/heads/main` &&
     ["schedule", "workflow_dispatch"].includes(String(p.event_name))
   );
 }
 export async function githubScheduleToken(
   token: string,
-  job: "cameras" | "daily" | "weather" = "cameras",
+  job: "cameras" | "daily" | "weather" | "platform" = "cameras",
 ) {
   try {
     const { payload } = await jwtVerify(token, jwks, {

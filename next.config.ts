@@ -4,6 +4,7 @@ const config: NextConfig = {
   outputFileTracingIncludes: {
     "/api/hub/[[...path]]": ["./assets/fonts/**/*"],
     "/api/hub/[...path]": ["./assets/fonts/**/*"],
+    "/api/platform/[...path]": ["./assets/fonts/**/*"],
   },
   async headers() {
     const cameraHosts = [

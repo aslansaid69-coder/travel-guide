@@ -24,11 +24,16 @@ export async function drainNotifications() {
             )
           : n.channel === "telegram"
             ? !!process.env.TELEGRAM_BOT_TOKEN
-            : !!(
-                process.env.TWILIO_ACCOUNT_SID &&
-                process.env.TWILIO_AUTH_TOKEN &&
-                process.env.TWILIO_FROM
-              );
+            : n.channel === "whatsapp"
+              ? !!(
+                  process.env.WHATSAPP_ACCESS_TOKEN &&
+                  process.env.WHATSAPP_PHONE_NUMBER_ID
+                )
+              : !!(
+                  process.env.TWILIO_ACCOUNT_SID &&
+                  process.env.TWILIO_AUTH_TOKEN &&
+                  process.env.TWILIO_FROM
+                );
       if (!configured) {
         totals.pending++;
         await sql`UPDATE hub_notifications SET last_error='Provider configuration required.' WHERE id=${n.id}`;
@@ -68,7 +73,50 @@ export async function drainNotifications() {
               signal: AbortSignal.timeout(8000),
             },
           );
-        else
+        else if (n.channel === "whatsapp") {
+          const recent = (
+            await sql`SELECT address FROM whatsapp_windows WHERE address=${n.recipient} AND last_inbound>now()-interval '24 hours'`
+          )[0];
+          if (!recent && !process.env.WHATSAPP_TEMPLATE_NAME)
+            throw new Error(
+              "Approved WhatsApp template required outside the service window.",
+            );
+          r = await fetch(
+            `https://graph.facebook.com/${process.env.WHATSAPP_API_VERSION || "v25.0"}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                messaging_product: "whatsapp",
+                to: n.recipient,
+                ...(recent
+                  ? { type: "text", text: { body: `${n.subject}\n${n.body}` } }
+                  : {
+                      type: "template",
+                      template: {
+                        name: process.env.WHATSAPP_TEMPLATE_NAME,
+                        language: {
+                          code: process.env.WHATSAPP_TEMPLATE_LANGUAGE || "en",
+                        },
+                        components: [
+                          {
+                            type: "body",
+                            parameters: [
+                              { type: "text", text: n.subject },
+                              { type: "text", text: n.body },
+                            ],
+                          },
+                        ],
+                      },
+                    }),
+              }),
+              signal: AbortSignal.timeout(8000),
+            },
+          );
+        } else
           r = await fetch(
             `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`,
             {

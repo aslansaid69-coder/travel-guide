@@ -3,7 +3,7 @@ import { database } from "@/lib/db";
 import { boundedBody } from "@/lib/updates/body";
 import { itemSchema, type CatalogItem, type Rates } from "./types";
 import { settings } from "./store";
-async function overpass(query: string) {
+export async function overpass(query: string) {
   const endpoints = process.env.OVERPASS_ENDPOINT
     ? [process.env.OVERPASS_ENDPOINT]
     : [
@@ -219,10 +219,59 @@ export async function closureScan() {
         (v) => !!v && v !== "no",
       ),
   );
+  // Hours/accessibility changes become independent OSM drafts, never overwrite owner text.
+  let changes = 0;
+  for (const e of d.elements) {
+    const item = rows.find((r) => r.data.osmId === `${e.type}/${e.id}`);
+    if (!item || !e.tags) continue;
+    const current = itemSchema.parse(item.data),
+      hours = String(e.tags.opening_hours || ""),
+      accessibility = e.tags.wheelchair
+        ? `Wheelchair: ${e.tags.wheelchair}; verify with the venue.`
+        : current.accessibility;
+    if (
+      (hours && hours !== current.hours) ||
+      accessibility !== current.accessibility
+    ) {
+      const checkedAt = new Date().toISOString(),
+        evidence = {
+          source: "© OpenStreetMap contributors",
+          url: `https://www.openstreetmap.org/${e.type}/${e.id}`,
+          checkedAt,
+          confidence: 0.75,
+          persistence: "licensed",
+          licence: "ODbL 1.0",
+        },
+        id = `osm-recheck-${item.id}`;
+      const draft = {
+        id,
+        query: "Weekly changes to " + current.name,
+        item: {
+          ...current,
+          hours: hours || current.hours,
+          accessibility,
+          status: "pending",
+        },
+        fields: {
+          hours: { value: hours || current.hours, evidence },
+          accessibility: { value: accessibility, evidence },
+        },
+        price: current.price,
+        warnings: [
+          "Weekly source changes require owner review before publication.",
+        ],
+        status: "pending",
+        createdAt: checkedAt,
+      };
+      await sql`INSERT INTO research_drafts(id,query,data,actor) VALUES(${id},${draft.query},${JSON.stringify(draft)}::jsonb,'weekly-osm') ON CONFLICT(id) DO UPDATE SET data=EXCLUDED.data,status='pending',updated_at=now()`;
+      changes++;
+    }
+  }
   const conf = await settings();
   for (const e of flagged) {
-    const id = `osm-${e.type}-${e.id}`;
+    const id = rows.find((r) => r.data.osmId === `${e.type}/${e.id}`)?.id;
+    if (!id) continue;
     await sql`UPDATE hub_catalog SET data=jsonb_set(data,'{closed}','true'::jsonb),status=CASE WHEN ${conf.hideClosed} THEN 'hidden' ELSE status END,updated_at=now() WHERE id=${id}`;
   }
-  return { checked: ids.length, flagged: flagged.length };
+  return { checked: ids.length, flagged: flagged.length, changes };
 }

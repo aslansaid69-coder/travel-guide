@@ -1,0 +1,32 @@
+name: Guide and platform operations
+on:
+  schedule:
+    - cron: "4,19,34,49 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: platform-operations
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Refresh guide offers, loyalty and digests
+        env:
+          PLATFORM_JOB_URL: https://almaty-travel-guide.vercel.app/api/jobs/platform
+        run: |
+          node --input-type=module <<'JS'
+          const url = process.env.PLATFORM_JOB_URL;
+          const tokenResponse = await fetch(process.env.ACTIONS_ID_TOKEN_REQUEST_URL + '&audience=' + encodeURIComponent(url), {
+            headers: {Authorization: `Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}`}
+          });
+          if (!tokenResponse.ok) throw new Error('Unable to obtain scheduler identity');
+          const {value} = await tokenResponse.json();
+          const response = await fetch(url, {method: 'POST', headers: {Authorization: `Bearer ${value}`, 'X-Scheduler': 'github-actions'}, signal: AbortSignal.timeout(65000)});
+          const body = await response.text();
+          if (!response.ok) throw new Error(`Operations worker returned HTTP ${response.status}`);
+          console.log(body);
+          JS

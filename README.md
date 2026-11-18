@@ -1,3 +1,9 @@
+# November 19 platform extension
+
+Checkout/payment status, independent research and price review, guide profiles/invitations/calendars/matching, private trip chat/gallery/safety, owner payment/refund/transfer tools, assistant, bot hooks, deals/waitlists, loyalty and operations scheduling now extend the existing guide. Start with [Platform setup and practical limits](docs/PLATFORM-SETUP.md) and [UI state audit](docs/UI-STATE-AUDIT.md). Provider keys/eligibility remain required for real payments and message delivery. See the release report for actual verification; no browser accessibility score is claimed.
+
+Client requests: **[Travel desk](https://almaty-travel-guide.vercel.app/admin/hub)**. Other owner workspaces: `/admin/research`, `/admin/guides`, `/admin/payments`. Public guides: `/guides`; invited guide workspace: `/guide`. No fictional guide profiles, restaurants, menus or prices are seeded.
+
 # Almaty, with love — travel hub
 
 The existing guide now includes an approved catalog/map, restaurants/menus, itinerary builder, share/PDF, package booking requests, inventory, quotes/payments integration, staff dashboard and owner insights. Start with [Travel hub setup](docs/TRAVEL-HUB-SETUP.md) for credentials, role assignment, source permissions, booking workflow, deployment and testing. Existing camera/weather operations continue below.
