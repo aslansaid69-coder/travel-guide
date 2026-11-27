@@ -1,6 +1,7 @@
 import places from "@/data/places.json";
+import researchedPrices from "@/data/place-prices.json";
 import { database } from "@/lib/db";
-import { itemSchema, defaultSettings } from "./types";
+import { itemSchema, defaultSettings, priceSchema } from "./types";
 const positions: Record<string, [number, number, number]> = {
   medeu: [43.1579, 77.0583, 120],
   shymbulak: [43.1289, 77.0804, 240],
@@ -27,6 +28,7 @@ export async function seedCatalog() {
             : p.id === "kok-tobe"
               ? "viewpoint"
               : "mountains",
+      slug: p.id,
       status: "approved",
       outdoor: true,
       source: "Owner-approved travel guide",
@@ -38,4 +40,17 @@ export async function seedCatalog() {
     await sql`INSERT INTO hub_catalog(id,data,status) VALUES(${item.id},${JSON.stringify(item)}::jsonb,'approved') ON CONFLICT(id) DO NOTHING`;
   }
   await sql`INSERT INTO hub_settings(id,data) VALUES(true,${JSON.stringify(defaultSettings)}::jsonb) ON CONFLICT DO NOTHING`;
+  await applyResearchedPrices();
+}
+
+/**
+ * Entrance prices researched with sources (data/place-prices.json). Applied only where no
+ * price has been entered yet, so owner-confirmed prices are never overwritten.
+ */
+export async function applyResearchedPrices() {
+  const sql = database();
+  for (const r of researchedPrices) {
+    const price = priceSchema.parse(r.price);
+    await sql`UPDATE hub_catalog SET data = data || jsonb_build_object('price', ${JSON.stringify(price)}::jsonb, 'priceStatus', ${r.priceStatus}::text) WHERE id=${r.id} AND (data->'price' IS NULL OR jsonb_typeof(data->'price')='null') AND COALESCE(data->>'priceStatus','unknown') <> 'not_found'`;
+  }
 }

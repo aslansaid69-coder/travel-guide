@@ -1,0 +1,109 @@
+[
+  {
+    "id": "kok-tobe",
+    "priceStatus": "found",
+    "price": {
+      "type": "range",
+      "min": 600000,
+      "max": 1000000,
+      "child": 300000,
+      "currency": "KZT",
+      "source": "auto-detected",
+      "updatedAt": "2026-11-27",
+      "checkedAt": "2026-11-27",
+      "sourceUrl": "https://www.kazakhstantourism.org/kok-tobe-almaty/",
+      "note": "Cable car, adult: 6,000 ₸ one way / 10,000 ₸ return (tariff from 1 Feb 2026). Child 6–12: 3,000 / 5,000 ₸. Park attractions extra."
+    }
+  },
+  {
+    "id": "shymbulak",
+    "priceStatus": "found",
+    "price": {
+      "type": "range",
+      "min": 700000,
+      "max": 1200000,
+      "child": 400000,
+      "currency": "KZT",
+      "source": "auto-detected",
+      "updatedAt": "2026-11-27",
+      "checkedAt": "2026-11-27",
+      "sourceUrl": "https://astanatimes.com/2026/11/first-time-in-almatys-mountains-visitors-guide-to-shymbulak/",
+      "note": "Gondola Medeu–Shymbulak–Talgar pass, adult 15+: one way from 5,000–7,000 ₸, return 12,000 ₸; child 6–14: 4,000 ₸; under 6 free. Ski pass not included."
+    }
+  },
+  {
+    "id": "medeu",
+    "priceStatus": "found",
+    "price": {
+      "type": "free",
+      "min": 0,
+      "max": 0,
+      "currency": "KZT",
+      "source": "auto-detected",
+      "updatedAt": "2026-11-27",
+      "checkedAt": "2026-11-27",
+      "sourceUrl": "https://zabugorshiki.com/medeo/",
+      "note": "Entry to the Medeu area is free. The skating rink is closed for reconstruction in the 2026/27 season (https://rentus.kz/blog/medeu-katok-i-plotina/). Parking about 500–1,000 ₸."
+    }
+  },
+  {
+    "id": "panfilov",
+    "priceStatus": "found",
+    "price": {
+      "type": "free",
+      "min": 0,
+      "max": 0,
+      "currency": "KZT",
+      "source": "auto-detected",
+      "updatedAt": "2026-11-27",
+      "checkedAt": "2026-11-27",
+      "sourceUrl": "https://www.lonelyplanet.com/points-of-interest/panfilov-park/443066",
+      "note": "Public park, free entry 24/7. Ascension (Zenkov) Cathedral: free, donations welcome."
+    }
+  },
+  {
+    "id": "green-bazaar",
+    "priceStatus": "found",
+    "price": {
+      "type": "free",
+      "min": 0,
+      "max": 0,
+      "currency": "KZT",
+      "source": "auto-detected",
+      "updatedAt": "2026-11-27",
+      "checkedAt": "2026-11-27",
+      "sourceUrl": "https://en.tengrinews.kz/guideshops/green-bazaar-what-should-tourists-know-before-visiting-it-263525",
+      "note": "Public market, no ticket. Opening hours vary by season; the main hall may be under renovation."
+    }
+  },
+  {
+    "id": "charyn",
+    "priceStatus": "found",
+    "price": {
+      "type": "range",
+      "min": 73000,
+      "max": 150000,
+      "currency": "KZT",
+      "source": "estimated",
+      "updatedAt": "2026-11-27",
+      "checkedAt": "2026-11-27",
+      "sourceUrl": "https://charyncanyon.org/hours-and-fees/",
+      "note": "No official 2026 tariff found. Published figures range 730–1,500 ₸ per person; eco-taxi 500 ₸ each way, vehicle 100–500 ₸. Cash only. Owner should confirm."
+    }
+  },
+  {
+    "id": "big-almaty-lake",
+    "priceStatus": "found",
+    "price": {
+      "type": "range",
+      "min": 20000,
+      "max": 65000,
+      "currency": "KZT",
+      "source": "estimated",
+      "updatedAt": "2026-11-27",
+      "checkedAt": "2026-11-27",
+      "sourceUrl": "https://www.kazakhstantourism.org/big-almaty-lake/",
+      "note": "Ile-Alatau National Park eco-fee; no official 2026 tariff found. Reports range 200–650 ₸ per person, cash. Owner should confirm."
+    }
+  }
+]

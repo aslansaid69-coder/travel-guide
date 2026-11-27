@@ -17,7 +17,8 @@
     "test:platform:http": "node --env-file=.env.platform-test --import tsx scripts/test-platform-http.ts",
     "lint": "eslint .",
     "db:migrate:status": "node --env-file=.env.local --import tsx scripts/migrate.ts --dry-run",
-    "db:migrate:prod": "node --import tsx scripts/migrate.ts"
+    "db:migrate:prod": "node --import tsx scripts/migrate.ts",
+    "test:local-db": "node --conditions=react-server --import tsx --test tests/integration/*.itest.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.14.0",
@@ -49,10 +50,12 @@
     "@types/leaflet": "^1.9.22",
     "@types/leaflet.markercluster": "^1.5.6",
     "@types/node": "^22.0.0",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "eslint": "^10.15.0",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "pg": "^8.23.1",
     "prettier": "^3.10.1",
     "tailwindcss": "4.3.5",
     "tsx": "^4.20.0",
