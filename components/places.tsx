@@ -2,6 +2,7 @@
 import type { CatalogItem } from "@/lib/hub/types";
 import { useLanguage, T } from "@/components/hub/language";
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   ArrowUpRight,
@@ -130,7 +131,11 @@ export function Places() {
                 </div>
                 <div className="place-content">
                   <p className="card-category">{p.label}</p>
-                  <h3>{lang === "ru" && p.nameRu ? p.nameRu : p.name}</h3>
+                  <h3>
+                    <Link href={`/places/${("slug" in p && p.slug) || p.id}`}>
+                      {lang === "ru" && p.nameRu ? p.nameRu : p.name}
+                    </Link>
+                  </h3>
                   <p className="card-description">
                     {lang === "ru" && p.descriptionRu
                       ? p.descriptionRu
@@ -139,6 +144,14 @@ export function Places() {
                   <div className="season">
                     <Sun size={15} />
                     {p.season}
+                  </div>
+                  <div className="place-card-actions">
+                    <Link className="button button-accent" href={`/build?add=${encodeURIComponent(p.id)}`}>
+                      <T ru="Добавить в тур" kk="Турға қосу">Add to tour</T>
+                    </Link>
+                    <Link className="button button-outline" href={`/places/${("slug" in p && p.slug) || p.id}`}>
+                      <T ru="Подробнее и отзывы" kk="Толығырақ">Details & reviews</T>
+                    </Link>
                   </div>
                   <button
                     className="directions-toggle"

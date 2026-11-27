@@ -65,6 +65,9 @@ export function Header() {
               <ArrowUpRight size={18} />
             </a>
           ))}
+          <Link href="/build" onClick={() => setOpen(false)}>
+            <T ru="Собрать тур">Build a tour</T>
+          </Link>
           <a href="/plan" onClick={() => setOpen(false)}>
             <T>Plan your trip</T>
           </a>

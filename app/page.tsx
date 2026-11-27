@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HomeTour } from "@/components/tours/home-tour";
 import Image from "next/image";
 import {
   ArrowDown,
@@ -111,9 +112,13 @@ export default async function Home() {
               </T>
             </p>
             <div className="hero-actions">
-              <a href="#places" className="button button-accent">
-                <T>Discover Almaty</T>
+              <Link href="/build" className="button button-accent">
+                <T ru="Собрать тур" kk="Тур құрастыру">Build your tour</T>
                 <ArrowUpRight size={19} />
+              </Link>
+              <a href="#places" className="hero-live-link">
+                <T>Discover Almaty</T>
+                <ArrowUpRight size={16} />
               </a>
               <a href="#live" className="hero-live-link">
                 <span className="pulse-dot" />
@@ -151,6 +156,7 @@ export default async function Home() {
             <span>WELCOME TO ALMATY</span>
           </div>
         </section>
+        <HomeTour />
         <HubTeaser />
         <Places />
         <Tips />
@@ -235,7 +241,7 @@ export default async function Home() {
             <a href="/credits">Photo & source credits</a>
             <a href="/privacy">Privacy</a>
             <a href="/emergency">Emergency help</a>
-            <a href="/admin/hub">Travel desk</a>
+            <Link href="/admin">Admin</Link>
             <span>
               Made with{" "}
               <Heart size={12} className="heart" fill="currentColor" /> in
