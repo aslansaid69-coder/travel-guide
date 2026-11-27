@@ -122,7 +122,12 @@ export async function candidates(requestId: string) {
           r.plan.preferredGuideId,
         ),
         feeMinor: Math.ceil(
-          g.rateMinor * (g.rateType === "hour" ? w.hours : 1),
+          g.rateMinor *
+            (g.rateType === "hour"
+              ? w.hours
+              : g.rateType === "day"
+                ? Math.max(1, (r.plan as Plan).days.filter((d) => d.stops.length).length)
+                : 1),
         ),
         rating: row.rating ? Number(row.rating) : null,
         ...w,

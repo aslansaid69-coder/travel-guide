@@ -35,9 +35,9 @@ export function Header() {
           </a>
           <LanguageSwitch /><ThemeToggle/>
         </nav>
-        <a className="nav-cta" href="/plan">
-          <T>Plan your trip</T> <ArrowUpRight size={17} />
-        </a>
+        <Link className="nav-cta" href="/build">
+          <T ru="Собрать тур">Build a tour</T> <ArrowUpRight size={17} />
+        </Link>
         <button
           className="menu-button"
           aria-label={open ? "Close navigation" : "Open navigation"}

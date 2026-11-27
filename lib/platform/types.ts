@@ -22,6 +22,12 @@ export const guideSchema = z.object({
   photo: text(800).default(""),
   bio: text(1800).default(""),
   bioRu: text(1800).default(""),
+  bioKk: text(1800).default(""),
+  experienceYears: z.number().int().min(0).max(70).default(0),
+  /** Owner-entered starting rating (e.g. from previous platforms); approved reviews take over. */
+  rating: z.number().min(0).max(5).nullable().default(null),
+  telegram: text(100).default(""),
+  whatsapp: text(50).default(""),
   languages: z
     .array(z.enum(["en", "ru", "kk", "zh", "de", "fr", "tr", "es"]))
     .min(1)
@@ -29,7 +35,7 @@ export const guideSchema = z.object({
   specialties: z.array(z.enum(specialties)).max(6),
   areas: z.array(text(100)).max(15).default(["Almaty"]),
   certifications: z.array(text(200)).max(15).default([]),
-  rateType: z.enum(["hour", "tour"]),
+  rateType: z.enum(["day", "hour", "tour"]),
   rateMinor: z.number().int().min(0).max(100000000),
   currency: currencySchema.default("KZT"),
   commissionPercent: z.number().min(0).max(60).default(20),

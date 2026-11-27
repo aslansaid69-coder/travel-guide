@@ -96,6 +96,8 @@ test("proxy protects admin and account areas only", () => {
   assert.equal(protectedArea("/account"), "account");
   assert.equal(protectedArea("/guide"), "account");
   assert.equal(protectedArea("/guides"), null);
+  assert.equal(protectedArea("/bookings/tb_abc"), "account");
+  assert.equal(protectedArea("/build"), null);
   assert.equal(protectedArea("/"), null);
   assert.equal(protectedArea("/places/medeu"), null);
 });

@@ -9,6 +9,8 @@ import { paymentLink } from "@/lib/platform/store";
 import { notify } from "@/lib/hub/store";
 import { siteUrl } from "@/lib/site";
 import { boundedBody } from "@/lib/updates/body";
+import { isTourEvent, toPaymentEvent } from "@/lib/payments/stripe";
+import { applyPaymentEvent } from "@/lib/tours/payments";
 export const runtime = "nodejs";
 export async function POST(request: Request) {
   if (!process.env.STRIPE_WEBHOOK_SECRET || !process.env.STRIPE_SECRET_KEY)
@@ -29,6 +31,15 @@ export async function POST(request: Request) {
       { error: "Invalid webhook signature." },
       { status: 400 },
     );
+  }
+  // Self-service tour bookings (metadata.kind = "tour") use the provider-neutral flow.
+  if (isTourEvent(event)) {
+    try {
+      const outcome = await applyPaymentEvent("stripe", toPaymentEvent(event));
+      return Response.json({ received: true, outcome });
+    } catch {
+      return Response.json({ error: "Tour payment reconciliation needs retry." }, { status: 500 });
+    }
   }
   if (event.type === "invoice.paid" || event.type === "invoice.finalized") {
     try {

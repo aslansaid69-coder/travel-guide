@@ -81,7 +81,12 @@ export function canAssignRole(
 /** Paths whose pages require an authenticated session before rendering. */
 export function protectedArea(pathname: string): "admin" | "account" | null {
   if (pathname === "/admin" || pathname.startsWith("/admin/")) return "admin";
-  if (pathname === "/account" || pathname.startsWith("/account/") || pathname === "/guide")
+  if (
+    pathname === "/account" ||
+    pathname.startsWith("/account/") ||
+    pathname === "/guide" ||
+    pathname.startsWith("/bookings/")
+  )
     return "account";
   return null;
 }

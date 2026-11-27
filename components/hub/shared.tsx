@@ -18,6 +18,9 @@ export function HubHeader() {
         <a href="/explore">
           <T>Explore</T>
         </a>
+        <Link href="/build">
+          <T ru="Собрать тур">Build a tour</T>
+        </Link>
         <a href="/plan">
           <T>Plan your trip</T>
         </a>

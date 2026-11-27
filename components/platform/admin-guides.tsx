@@ -21,11 +21,16 @@ const empty: GuideDraft = {
   photo: "",
   bio: "",
   bioRu: "",
+  bioKk: "",
+  experienceYears: 0,
+  rating: null,
+  telegram: "",
+  whatsapp: "",
   languages: ["en"],
   specialties: ["history"],
   areas: ["Almaty"],
   certifications: [],
-  rateType: "tour",
+  rateType: "day",
   rateMinor: 0,
   currency: "KZT",
   commissionPercent: 20,
@@ -244,6 +249,52 @@ export function GuidesAdmin() {
                   onChange={(e) => setEdit({ ...edit, bioRu: e.target.value })}
                 />
               </Field>
+              <Field label="Kazakh biography">
+                <textarea
+                  value={edit.bioKk}
+                  onChange={(e) => setEdit({ ...edit, bioKk: e.target.value })}
+                />
+              </Field>
+            </div>
+            <div className="platform-form-row">
+              <Field label="Experience (years)">
+                <input
+                  type="number"
+                  min="0"
+                  max="70"
+                  value={edit.experienceYears}
+                  onChange={(e) =>
+                    setEdit({ ...edit, experienceYears: Number(e.target.value) })
+                  }
+                />
+              </Field>
+              <Field label="Starting rating (0–5, optional)">
+                <input
+                  type="number"
+                  min="0"
+                  max="5"
+                  step="0.1"
+                  value={edit.rating ?? ""}
+                  onChange={(e) =>
+                    setEdit({
+                      ...edit,
+                      rating: e.target.value === "" ? null : Number(e.target.value),
+                    })
+                  }
+                />
+              </Field>
+              <Field label="Telegram">
+                <input
+                  value={edit.telegram}
+                  onChange={(e) => setEdit({ ...edit, telegram: e.target.value })}
+                />
+              </Field>
+              <Field label="WhatsApp">
+                <input
+                  value={edit.whatsapp}
+                  onChange={(e) => setEdit({ ...edit, whatsapp: e.target.value })}
+                />
+              </Field>
             </div>
             <fieldset>
               <legend>Languages</legend>
@@ -322,7 +373,7 @@ export function GuidesAdmin() {
                   }
                 />
               </Field>
-              <Field label="Rate in major currency units">
+              <Field label="Rate (e.g. day rate in tenge)">
                 <input
                   type="number"
                   min="0"
@@ -343,6 +394,7 @@ export function GuidesAdmin() {
                     setEdit({ ...edit, rateType: e.target.value })
                   }
                 >
+                  <option value="day">Per day</option>
                   <option value="tour">Per tour</option>
                   <option value="hour">Per hour of planned stops</option>
                 </select>
