@@ -78,7 +78,7 @@ export default async function PlacePage({ params }: Props) {
         </p>
         <Localized as="h1" en={item.name} ru={item.nameRu} kk={item.nameKk} />
         {gallery.length > 0 && (
-          <div className="place-hero">
+          <div className="place-hero" data-count={Math.min(gallery.length, 5)}>
             {gallery.slice(0, 5).map((g, i) => (
               <figure key={g.src + i}>
                 <img src={g.src} alt={g.alt} loading={i ? "lazy" : "eager"} referrerPolicy="no-referrer" />

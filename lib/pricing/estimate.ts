@@ -154,7 +154,7 @@ export function estimateTour(input: EstimateInput, s: PricingSettings): Estimate
   } else if (input.guide?.kind === "market" && input.guide.count > 0) {
     guideMin = input.guide.minDayMinor * days;
     guideMax = input.guide.maxDayMinor * days;
-    guideDetail = `${days} day${days > 1 ? "s" : ""} × day rate of available guides (average ${Math.round(input.guide.averageDayMinor / 100)})`;
+    guideDetail = `${days} day${days > 1 ? "s" : ""} × day rate of available guides (average ${Math.round(input.guide.averageDayMinor / 100).toLocaleString("ru-RU")} ${s.currency})`;
   } else {
     guideMin = guideMax = s.fallbackGuideDayMinor * days;
     guideDetail = `${days} day${days > 1 ? "s" : ""} × typical guide day rate`;

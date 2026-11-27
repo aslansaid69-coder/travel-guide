@@ -12,7 +12,7 @@ export const pricingSchema = z.object({
   /** Straight-line distance × road factor approximates road distance when no router is configured. */
   roadFactor: z.number().min(1).max(3).default(1.35),
   /** Average door-to-door speed for drive-time estimates (km/h). */
-  averageSpeedKmh: z.number().min(5).max(120).default(40),
+  averageSpeedKmh: z.number().min(5).max(120).default(55),
   /** Upper bound adds this % to transport for traffic, detours and waiting time. */
   transportBufferPercent: z.number().min(0).max(100).default(20),
   /** Touring hours per day used to work out the number of days. */

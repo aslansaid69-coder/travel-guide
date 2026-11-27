@@ -129,7 +129,9 @@ export function publicGuide(row: {
     rateType: g.rateType,
     rateMinor: g.rateMinor,
     currency: g.currency,
-    rating: row.rating ? Number(row.rating) : null,
+    bioKk: scrubContacts(g.bioKk),
+    experienceYears: g.experienceYears,
+    rating: row.rating ? Number(row.rating) : g.rating,
     reviewCount: Number(row.review_count || 0),
   };
 }

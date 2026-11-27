@@ -36,3 +36,5 @@ export const STATUS_LABELS: Record<BookingStatus, { en: string; ru: string; kk: 
   cancelled: { en: "Cancelled", ru: "Отменено", kk: "Бас тартылды" },
   refunded: { en: "Refunded", ru: "Возвращено", kk: "Қайтарылды" },
 };
+export const statusTone = (s: BookingStatus): "ok" | "warn" | "bad" =>
+  s === "confirmed" || s === "completed" || s === "paid" ? "ok" : s === "pending" ? "warn" : "bad";

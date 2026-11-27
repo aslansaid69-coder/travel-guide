@@ -54,8 +54,24 @@ npm run db:migrate:prod    # same runner, env taken from the shell (CI / product
 ```
 
 Run migrations against a **Neon dev branch** first; never run integration scripts against production.
-A local Postgres 16 can be used for smoke-testing SQL (`DATABASE_URL=postgres://...`), but `@neondatabase/serverless`
-needs a Neon (HTTP) endpoint at runtime.
+
+Local integration tests (real Postgres via a Neon HTTP shim, no cloud needed):
+
+```bash
+LOCAL_PG_URL=postgres://postgres:postgres@localhost/travel_it node --import tsx scripts/dev/neon-http-shim.ts &
+export NEON_HTTP_SHIM=http://localhost:4444/sql DATABASE_URL=postgres://postgres:postgres@db.local/travel_it
+node --import tsx scripts/migrate.ts && npm run test:local-db
+```
+
+## Feature map (Nov 2026 upgrade)
+
+- Places: `lib/places/*` (providers google/opentripmap/wikipedia behind `PlaceProvider`), admin `app/admin/places`, public `app/places/[slug]`.
+- Pricing: `lib/pricing/estimate.ts` (`estimateTour`, pure, tested) + `lib/pricing/settings.ts`; server wrapper `lib/tours/service.ts` (`quoteTour`).
+- Tours: builder `app/build`, booking page `app/bookings/[id]`, lifecycle `lib/tours/status.ts`, payments `lib/tours/payments.ts`.
+- Payments: `lib/payments/*` (`PaymentProvider`, Stripe); webhook `app/api/payments/webhook` routes `metadata.kind=tour` events.
+- Guides: matching `lib/guides/match.ts`; owner editor `components/platform/admin-guides.tsx`.
+- Reviews: `lib/reviews/store.ts` (verified-trip only, moderation, live Google reviews).
+- Assistant: `app/api/assistant` (NDJSON stream) → `lib/assistant/run.ts` (Claude tool loop) + `tools.ts`; widget `components/assistant/chat.tsx`.
 
 ## Environment variables
 

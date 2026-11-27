@@ -11,6 +11,7 @@ import {
   platform,
 } from "./shared";
 import type { GuidesPublicView, GuideWorkspaceView } from "./view-types";
+import { useLanguage } from "@/components/hub/language";
 export function GuideMarketplace({
   id,
   initial,
@@ -18,6 +19,7 @@ export function GuideMarketplace({
   id?: string;
   initial?: GuidesPublicView;
 }) {
+  const { lang } = useLanguage();
   const s = useResource<GuidesPublicView>(
     "guides" + (id ? "/" + id : ""),
     undefined,
@@ -47,7 +49,13 @@ export function GuideMarketplace({
               <p className="eyebrow">YOUR LOCAL CONNECTION</p>
             )}
             <h2>{g.name}</h2>
-            <p>{g.bio}</p>
+            <p>{(lang === "kk" && g.bioKk) || (lang === "ru" && g.bioRu) || g.bio}</p>
+            {g.experienceYears > 0 && (
+              <p className="platform-muted">
+                {g.experienceYears}{" "}
+                {lang === "ru" ? "лет опыта" : lang === "kk" ? "жыл тәжірибе" : "years of experience"}
+              </p>
+            )}
             <p>
               {g.languages.map((v: string) => v.toUpperCase()).join(" · ")}
               <br />
@@ -61,7 +69,7 @@ export function GuideMarketplace({
             )}
             <p>
               <Money amount={g.rateMinor} currency={g.currency} /> /{" "}
-              {g.rateType === "hour" ? "hour" : "tour"}
+              {g.rateType === "hour" ? "hour" : g.rateType === "day" ? "day" : "tour"}
             </p>
             <p>
               {g.rating
@@ -69,8 +77,8 @@ export function GuideMarketplace({
                 : "No published trip reviews yet."}
             </p>
             <div className="platform-actions">
-              <a className="button button-accent" href={`/plan?guide=${g.id}`}>
-                Request this guide
+              <a className="button button-accent" href="/build">
+                {lang === "ru" ? "Собрать тур" : lang === "kk" ? "Тур құрастыру" : "Build a tour"}
               </a>
               {!id && <a href={`/guides/${g.id}`}>Profile ↗</a>}
             </div>

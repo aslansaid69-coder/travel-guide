@@ -432,3 +432,21 @@
 .review-verified{display:inline-flex;gap:4px;align-items:center;padding:1px 8px;border-radius:999px;background:#dff3e6;color:#14532d;font-size:.75rem;font-weight:600}
 .review-google{font-size:.75rem;color:var(--text-secondary)}
 .stars{color:#b45309;letter-spacing:1px}
+.assistant-panel{display:flex;flex-direction:column;max-height:min(640px,calc(100vh - 110px))}
+.assistant-log{flex:1;overflow-y:auto;display:grid;gap:8px;align-content:start;padding:4px 2px;min-height:160px}
+.assistant-msg{margin:0;padding:9px 12px;border-radius:12px;white-space:pre-wrap;line-height:1.5}
+.assistant-user{justify-self:end;background:var(--control-selected-bg);color:var(--control-selected-fg);max-width:85%}
+.assistant-assistant{background:var(--surface-alt);color:var(--text);max-width:95%}
+.assistant-assistant a{text-decoration:underline}
+.assistant-error{border:1px solid #a52a22}
+.assistant-suggestion{display:block;text-align:left;width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text)}
+.assistant-form{display:flex;gap:8px;align-items:flex-end;margin-top:8px}
+.assistant-form textarea{flex:1;resize:none;border:1px solid var(--control-border);border-radius:10px;padding:8px 10px;background:var(--surface);color:var(--text)}
+@media (max-width:560px){.assistant-panel{left:8px!important;right:8px!important;width:auto!important;max-height:calc(100vh - 90px)}}
+.tour-page h1{font-family:var(--font-serif),serif;font-weight:400;font-size:clamp(2rem,5vw,3.2rem);line-height:1.1;margin:.2em 0 .4em}
+.place-hero[data-count="1"]{grid-template-columns:1fr}
+.place-hero[data-count="1"] figure:first-child{grid-row:auto;min-height:clamp(240px,40vw,460px)}
+.place-hero[data-count="2"] figure:first-child{grid-row:auto}
+.place-hero[data-count="2"]{grid-template-columns:1fr 1fr}
+.tour-place[aria-pressed=true]{background:var(--surface)!important;color:var(--text)!important}
+@media (max-width:640px){.tour-places{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.tour-place small{font-size:.72rem}}
