@@ -18,7 +18,8 @@
     "lint": "eslint .",
     "db:migrate:status": "node --env-file=.env.local --import tsx scripts/migrate.ts --dry-run",
     "db:migrate:prod": "node --import tsx scripts/migrate.ts",
-    "test:local-db": "node --conditions=react-server --import tsx --test tests/integration/*.itest.ts"
+    "test:local-db": "node --conditions=react-server --import tsx --test tests/integration/*.itest.ts",
+    "vercel-build": "node --import tsx scripts/predeploy.ts && next build --webpack"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.14.0",
