@@ -1,7 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
-import { MessageCircle, X, Send } from "lucide-react";
-import { useLanguage } from "@/components/hub/language";
+import { useEffect } from "react";
 import {
   Shell,
   useResource,
@@ -12,144 +10,10 @@ import {
   Money,
   platform,
 } from "./shared";
-export function TravelAssistant() {
-  const [open, setOpen] = useState(false),
-    [question, setQuestion] = useState(""),
-    [reply, setReply] = useState<any>(null),
-    [message, setMessage] = useState(""),
-    [busy, setBusy] = useState(false),
-    [ai, setAI] = useState(false);
-  const { lang } = useLanguage();
-  return (
-    <>
-      <div className="platform-assistant">
-        <Button
-          primary
-          aria-expanded={open}
-          aria-controls="travel-assistant"
-          onClick={() => setOpen(!open)}
-        >
-          <MessageCircle size={19} />
-          {open
-            ? lang === "ru"
-              ? "Закрыть"
-              : "Close"
-            : lang === "ru"
-              ? "Помощник"
-              : "Ask a local"}
-        </Button>
-      </div>
-      {open && (
-        <section
-          id="travel-assistant"
-          className="platform-assistant-panel"
-          aria-label="Travel assistant"
-        >
-          <div className="platform-panel-title">
-            <h2>
-              {lang === "ru"
-                ? "Ваш помощник в Алматы"
-                : "A little local knowledge."}
-            </h2>
-            <Button
-              aria-label="Close travel assistant"
-              onClick={() => setOpen(false)}
-            >
-              <X size={18} />
-            </Button>
-          </div>
-          <p className="platform-muted">
-            {lang === "ru"
-              ? "Места, погода и планирование. Бронирование и итоговые цены подтверждает команда."
-              : "Places, weather and planning. Our team confirms bookings and final prices."}
-          </p>
-          <form
-            className="platform-form"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              setBusy(true);
-              setMessage("");
-              try {
-                setReply(
-                  await platform("assistant", {
-                    question,
-                    language: lang,
-                    useAI: ai,
-                  }),
-                );
-              } catch (e) {
-                setMessage((e as Error).message);
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            <Field
-              label={
-                lang === "ru"
-                  ? "Что вас интересует?"
-                  : "What would you like to know?"
-              }
-            >
-              <textarea
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                maxLength={1000}
-                required
-              />
-            </Field>
-            <label className="platform-check">
-              <input
-                type="checkbox"
-                checked={ai}
-                onChange={(e) => setAI(e.target.checked)}
-              />
-              {lang === "ru"
-                ? "Использовать ИИ (если настроен); вопрос будет передан провайдеру."
-                : "Use optional AI phrasing; sends your question to the configured provider."}
-            </label>
-            <Button primary busy={busy}>
-              <Send size={16} />
-              {lang === "ru" ? "Спросить" : "Ask"}
-            </Button>
-          </form>
-          <Status message={message} busy={busy} />
-          {reply && (
-            <div aria-live="polite">
-              <p>{reply.answer}</p>
-              {reply.items.map((i: any) => (
-                <div className="platform-evidence" key={i.id}>
-                  <strong>{i.name}</strong>
-                  <p className="platform-muted">
-                    {i.category} ·{" "}
-                    {i.price
-                      ? `${i.price.min / 100}–${i.price.max / 100} ${i.price.currency} (${i.price.source})`
-                      : "Price to confirm"}
-                  </p>
-                  <a
-                    className="button button-outline"
-                    href={`/plan?add=${i.id}`}
-                  >
-                    {lang === "ru" ? "Добавить в план" : "Add to plan"}
-                  </a>
-                </div>
-              ))}
-            </div>
-          )}
-          <p>
-            <a href="/plan">
-              {lang === "ru"
-                ? "Попросить менеджера помочь ↗"
-                : "Ask a manager to help ↗"}
-            </a>
-          </p>
-        </section>
-      )}
-    </>
-  );
-}
+import type { DealsView, LoyaltyView } from "./view-types";
 export function Deals() {
-  const s = useResource("deals");
+  const s = useResource<DealsView>("deals"),
+    { setMessage } = s;
   useEffect(() => {
     const f = new URLSearchParams(location.hash.slice(1)),
       value = f.get("confirm") || f.get("unsubscribe");
@@ -161,17 +25,17 @@ export function Deals() {
         key,
       })
         .then(() =>
-          s.setMessage(
+          setMessage(
             f.has("unsubscribe")
               ? "Unsubscribed from this service."
               : "Availability subscription confirmed.",
           ),
         )
-        .catch((e) => s.setMessage(e.message));
+        .catch((e) => setMessage(e.message));
       sessionStorage.setItem("almaty-waitlist", value);
       history.replaceState(null, "", location.pathname);
     }
-  }, []);
+  }, [setMessage]);
   return (
     <Shell
       title="Leave room for a little spontaneity."
@@ -180,7 +44,7 @@ export function Deals() {
     >
       <Status message={s.message} busy={s.busy} />
       <div className="platform-grid">
-        {s.data?.deals.map((d: any) => (
+        {s.data?.deals.map((d) => (
           <article className="platform-card" key={d.id}>
             {d.image && (
               <img
@@ -243,7 +107,7 @@ export function Deals() {
               </Field>
               <Field label="Experience">
                 <select name="item">
-                  {s.data.services.map((i: any) => (
+                  {s.data.services.map((i) => (
                     <option key={i.id} value={i.id}>
                       {i.name}
                     </option>
@@ -298,7 +162,7 @@ export function Deals() {
   );
 }
 export function Loyalty() {
-  const s = useResource("loyalty");
+  const s = useResource<LoyaltyView>("loyalty");
   return (
     <section className="platform-card platform-detail">
       <h2>Good journeys come around.</h2>
@@ -317,7 +181,7 @@ export function Loyalty() {
             {s.data.account.points} loyalty points · reward credits below are
             used as vouchers, not cash.
           </p>
-          {s.data.codes.map((c: any) => (
+          {s.data.codes.map((c) => (
             <p key={c.code}>
               <strong>{c.code}</strong> ·{" "}
               {c.data.kind === "promo" ? (

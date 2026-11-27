@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Image from "next/image";
 import {
   ArrowDown,
@@ -183,13 +184,13 @@ export default async function Home() {
       <footer className="footer">
         <div className="shell">
           <div className="footer-top">
-            <a href="/" className="brand footer-brand">
+            <Link href="/" className="brand footer-brand">
               <MountainSnow size={32} strokeWidth={1.3} />
               <span>
                 almaty<span className="brand-dot">.</span>
                 <small>WITH LOVE</small>
               </span>
-            </a>
+            </Link>
             <p>
               A city worth getting to know.
               <br />A guide to help you feel at home.

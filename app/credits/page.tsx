@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Header } from "@/components/header";
@@ -93,9 +94,9 @@ export default function Credits() {
           licence is included with the project source. The website uses Inter
           and DM Serif Display.
         </p>
-        <a className="button button-outline" href="/">
+        <Link className="button button-outline" href="/">
           Back to Almaty
-        </a>
+        </Link>
       </main>
     </>
   );

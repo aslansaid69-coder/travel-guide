@@ -22,11 +22,13 @@ import {
   platform,
   Money,
 } from "./shared";
+import type { TripView } from "./view-types";
+import type { CatalogItem } from "@/lib/hub/types";
 export function TripRoom({ id }: { id: string }) {
   const { lang } = useLanguage();
   const attemptedTranslations = useRef(new Set<string>());
   const access = usePrivate(),
-    s = useResource(`trip/${id}`, access.key, access.ready),
+    s = useResource<TripView>(`trip/${id}`, access.key, access.ready),
     [body, setBody] = useState(""),
     [location, setLocation] = useState(false),
     [latitude, setLatitude] = useState(""),
@@ -34,19 +36,20 @@ export function TripRoom({ id }: { id: string }) {
     [translations, setTranslations] = useState<Record<string, string>>({}),
     [translationConsent, setTranslationConsent] = useState(false),
     [day, setDay] = useState(0);
-  const d = s.data;
+  const d = s.data,
+    { load, setMessage } = s;
   useEffect(() => {
     if (!access.ready) return;
     const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") void s.load();
+      if (document.visibilityState === "visible") void load();
     }, 30000);
     return () => window.clearInterval(timer);
-  }, [access.ready, s.load]);
+  }, [access.ready, load]);
   useEffect(() => {
     if (!translationConsent || !d?.translationConfigured) return;
     let cancelled = false;
     const pending = d.messages
-      .filter((m: any) => {
+      .filter((m) => {
         const source =
           m.extra?.language || (/[а-яё]/i.test(m.body) ? "ru" : "en");
         return (
@@ -63,7 +66,7 @@ export function TripRoom({ id }: { id: string }) {
         const key = `${m.id}:${lang}`;
         attemptedTranslations.current.add(key);
         try {
-          const result = await platform(
+          const result = await platform<{ text: string }>(
             `trip/${id}`,
             {
               action: "translate",
@@ -76,7 +79,7 @@ export function TripRoom({ id }: { id: string }) {
           if (!cancelled)
             setTranslations((current) => ({ ...current, [key]: result.text }));
         } catch (error) {
-          if (!cancelled) s.setMessage((error as Error).message);
+          if (!cancelled) setMessage((error as Error).message);
           break;
         }
       }
@@ -91,7 +94,7 @@ export function TripRoom({ id }: { id: string }) {
     lang,
     id,
     access.key,
-    s.setMessage,
+    setMessage,
   ]);
   return (
     <Shell
@@ -157,7 +160,7 @@ export function TripRoom({ id }: { id: string }) {
                   role="group"
                   aria-label="Trip day"
                 >
-                  {d.request.plan.days.map((_: any, i: number) => (
+                  {d.request.plan.days.map((_, i) => (
                     <Button
                       aria-pressed={day === i}
                       key={i}
@@ -168,16 +171,15 @@ export function TripRoom({ id }: { id: string }) {
                   ))}
                 </div>
                 <ul className="platform-list platform-detail">
-                  {d.request.plan.days[day]?.stops.map((stop: any) => (
+                  {d.request.plan.days[day]?.stops.map((stop) => (
                     <li key={stop.id}>
                       <strong>
                         {stop.start} ·{" "}
-                        {d.items.find((i: any) => i.id === stop.itemId)?.name ||
+                        {d.items.find((i) => i.id === stop.itemId)?.name ||
                           "Stop to review"}
                       </strong>
                       <p>
-                        {d.items.find((i: any) => i.id === stop.itemId)
-                          ?.address ||
+                        {d.items.find((i) => i.id === stop.itemId)?.address ||
                           "Address not supplied; use the map coordinates."}
                       </p>
                       {stop.note && <p>{stop.note}</p>}
@@ -187,10 +189,8 @@ export function TripRoom({ id }: { id: string }) {
                 <TravelMap
                   items={d.items}
                   route={d.request.plan.days[day]?.stops
-                    .map((stop: any) =>
-                      d.items.find((i: any) => i.id === stop.itemId),
-                    )
-                    .filter(Boolean)}
+                    .map((stop) => d.items.find((i) => i.id === stop.itemId))
+                    .filter((i): i is CatalogItem => !!i)}
                 />
               </section>
               <section className="platform-card">
@@ -205,7 +205,7 @@ export function TripRoom({ id }: { id: string }) {
                   </p>
                 )}
                 <div className="platform-thread" aria-label="Booking messages">
-                  {d.messages.map((m: any) => (
+                  {d.messages.map((m) => (
                     <article className="platform-message" key={m.id}>
                       <small>
                         {m.actor === "client" ? "Traveller" : "Travel team"} ·{" "}
@@ -229,7 +229,7 @@ export function TripRoom({ id }: { id: string }) {
                       )}
                       {m.extra?.kind === "photo" && (
                         <PrivatePhoto
-                          id={m.extra.assetId}
+                          id={m.extra.assetId || ""}
                           requestId={id}
                           accessKey={access.key}
                         />
@@ -246,7 +246,7 @@ export function TripRoom({ id }: { id: string }) {
                           }
                           onClick={async () => {
                             try {
-                              const r = await platform(
+                              const r = await platform<{ text: string }>(
                                 `trip/${id}`,
                                 {
                                   action: "translate",
@@ -373,7 +373,7 @@ export function TripRoom({ id }: { id: string }) {
                   completed or cancelled trip.
                 </p>
                 <div className="platform-gallery">
-                  {d.assets.map((asset: any) => (
+                  {d.assets.map((asset) => (
                     <PrivatePhoto
                       id={asset.id}
                       requestId={id}
@@ -493,7 +493,7 @@ export function TripRoom({ id }: { id: string }) {
               {d.followups.length > 0 && (
                 <section className="platform-card">
                   <h2>One more Almaty adventure?</h2>
-                  {d.followups.map((f: any) => (
+                  {d.followups.map((f) => (
                     <article className="platform-evidence" key={f.id}>
                       <h3>{f.data.plan.title}</h3>
                       {f.data.quote ? (
@@ -509,13 +509,12 @@ export function TripRoom({ id }: { id: string }) {
                           <p>{f.data.quote.terms}</p>
                           <details className="platform-detail">
                             <summary>Itinerary and cancellation terms</summary>
-                            {f.data.plan.days.map((day: any, i: number) => (
+                            {f.data.plan.days.map((day, i) => (
                               <p key={i}>
                                 Day {i + 1}:{" "}
                                 {day.stops
                                   .map(
-                                    (stop: any) =>
-                                      `${stop.start} · ${stop.itemId}`,
+                                    (stop) => `${stop.start} · ${stop.itemId}`,
                                   )
                                   .join(" → ")}
                               </p>
@@ -626,7 +625,7 @@ export function TripRoom({ id }: { id: string }) {
                 <h2>
                   <ShieldCheck size={23} /> A safer day out
                 </h2>
-                {d.weather?.advice?.cautions?.length > 0 && (
+                {!!d.weather?.advice?.cautions?.length && (
                   <p className="platform-warning">
                     {d.weather.advice.cautions.join(" ")}
                   </p>
@@ -672,7 +671,7 @@ export function TripRoom({ id }: { id: string }) {
                   emergency services. Delivery depends on the configured
                   communication services.
                 </p>
-                {d.safety.slice(0, 3).map((e: any) => (
+                {d.safety.slice(0, 3).map((e) => (
                   <p className="platform-muted" key={e.id}>
                     {e.kind} · {new Date(e.created_at).toLocaleString()}
                   </p>

@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { ThemeToggle } from "@/components/ui/theme";
 import { T, LanguageSwitch } from "@/components/hub/language";
 import { useState } from "react";
@@ -8,35 +9,35 @@ export function Header() {
   return (
     <header className="site-header">
       <div className="shell nav-wrap">
-        <a href="/" className="brand" aria-label="Almaty with love home">
+        <Link href="/" className="brand" aria-label="Almaty with love home">
           <MountainSnow size={33} strokeWidth={1.4} />
           <span>
             almaty<span className="brand-dot">.</span>
             <small>WITH LOVE</small>
           </span>
-        </a>
+        </Link>
         <nav className="desktop-nav" aria-label="Main navigation">
-          <a href="/#live">
+          <Link href="/#live">
             <span className="tiny-dot" />
             <T>Live Almaty</T>
-          </a>
-          <a href="/#events">
+          </Link>
+          <Link href="/#events">
             <T>Events</T>
-          </a>
-          <a href="/#places">
+          </Link>
+          <Link href="/#places">
             <T>Places</T>
-          </a>
-          <a href="/#tips">
+          </Link>
+          <Link href="/#tips">
             <T>Travel tips</T>
-          </a>
+          </Link>
           <a href="/explore">
             <T>Explore</T>
           </a>
           <LanguageSwitch /><ThemeToggle/>
         </nav>
-        <a className="nav-cta" href="/plan">
-          <T>Plan your trip</T> <ArrowUpRight size={17} />
-        </a>
+        <Link className="nav-cta" href="/build">
+          <T ru="Собрать тур">Build a tour</T> <ArrowUpRight size={17} />
+        </Link>
         <button
           className="menu-button"
           aria-label={open ? "Close navigation" : "Open navigation"}

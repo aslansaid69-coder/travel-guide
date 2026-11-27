@@ -2,7 +2,7 @@
 import { useState, type FormEvent } from "react";
 import { createAuthClient } from "@neon/auth/next";
 const client = createAuthClient();
-export function StaffSignIn() {
+export function StaffSignIn({ next = "" }: { next?: string }) {
   const [email, setEmail] = useState(""),
     [code, setCode] = useState(""),
     [sent, setSent] = useState(false),
@@ -19,9 +19,11 @@ export function StaffSignIn() {
       if (result.error)
         throw new Error(result.error.message || "Sign-in failed.");
       if (sent) {
-        const destination = await fetch("/api/hub/admin")
-          .then((r) => (r.ok ? "/admin/hub" : "/account"))
-          .catch(() => "/account");
+        const destination =
+          next ||
+          (await fetch("/api/hub/admin")
+            .then((r) => (r.ok ? "/admin" : "/account"))
+            .catch(() => "/account"));
         window.location.assign(destination);
       } else {
         setSent(true);

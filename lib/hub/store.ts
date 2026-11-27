@@ -1,5 +1,4 @@
 import { siteUrl } from "@/lib/site";
-import { randomUUID } from "node:crypto";
 import { database } from "@/lib/db";
 import {
   itemSchema,
@@ -121,7 +120,7 @@ export async function assignedManager(language: string) {
   const sql = database();
   const conf = await settings();
   const rows =
-    await sql`SELECT s.user_id,s.email,p.languages,count(r.id)::int AS workload FROM staff_roles s LEFT JOIN hub_staff_profiles p ON p.user_id=s.user_id LEFT JOIN hub_requests r ON r.assigned_to=s.user_id AND r.status NOT IN ('completed','cancelled') WHERE s.role IN ('manager','owner') GROUP BY s.user_id,p.languages ORDER BY workload ASC,s.user_id`;
+    await sql`SELECT s.user_id,s.email,p.languages,count(r.id)::int AS workload FROM staff_roles s LEFT JOIN hub_staff_profiles p ON p.user_id=s.user_id LEFT JOIN hub_requests r ON r.assigned_to=s.user_id AND r.status NOT IN ('completed','cancelled') WHERE s.role IN ('admin','manager','owner') GROUP BY s.user_id,p.languages ORDER BY workload ASC,s.user_id`;
   return (
     (conf.assignment === "language"
       ? rows.find((r) => (r.languages || ["en"]).includes(language))

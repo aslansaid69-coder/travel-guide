@@ -36,6 +36,7 @@ export async function documentPdf(
       text = "";
     };
     for (const word of value
+      // eslint-disable-next-line no-control-regex -- strips control characters the PDF font cannot encode
       .replace(/[\u0000-\u0008\u000b-\u001f]/g, "")
       .split(/\s+/)) {
       if (font.widthOfTextAtSize(text + " " + word, size) > 500 && text)

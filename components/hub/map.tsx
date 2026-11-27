@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { CatalogItem } from "@/lib/hub/types";
 import { api } from "./shared";
 import { useT } from "./language";
+import type { RouteResult } from "@/lib/hub/routing";
 export function TravelMap({
   items,
   route,
@@ -14,18 +15,19 @@ export function TravelMap({
 }) {
   const ref = useRef<HTMLDivElement>(null),
     [loaded, setLoaded] = useState(false),
-    [routing, setRouting] = useState<any>(null);
+    [routing, setRouting] = useState<RouteResult | null>(null);
   const t = useT();
   useEffect(() => {
     let live = true;
     if (route?.length)
       void api("route", { itemIds: route.map((i) => i.id) })
-        .then((d) => {
+        .then((d: RouteResult) => {
           if (live) setRouting(d);
         })
         .catch(() => {
           if (live) setRouting(null);
         });
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs browser-only state (URL, storage, clock) or an async fetch result after hydration
     else setRouting(null);
     return () => {
       live = false;
@@ -119,9 +121,9 @@ export function TravelMap({
             "Straight-line overview. Road routes and travel times are estimates; open Google Maps for navigation."}
         </p>
       )}
-      {route && routing?.legs?.length > 0 && (
+      {route && routing && routing.legs.length > 0 && (
         <ol className="hub-route-legs">
-          {routing.legs.map((leg: any, i: number) => (
+          {routing.legs.map((leg, i) => (
             <li key={i}>
               {route[i]?.name} → {route[i + 1]?.name}: {leg.duration} min ·{" "}
               {leg.distance.toFixed(1)} km{" "}

@@ -168,22 +168,44 @@ const words: Record<string, string> = {
   Sunset: "Закат",
 };
 Object.assign(words, extra);
+export type Lang = "en" | "ru" | "kk";
+/** Kazakh UI strings. Missing keys fall back to Russian, then English. */
+const kk: Record<string, string> = {
+  Explore: "Шолу",
+  "Plan your trip": "Сапарды жоспарлау",
+  "My plans": "Жоспарларым",
+  "Return to the guide": "Нұсқаулыққа оралу",
+  "Emergency help": "Шұғыл көмек",
+  Privacy: "Құпиялылық",
+  "Travel desk": "Саяхат бюросы",
+  "Made with love in Almaty": "Алматыда сүйіспеншілікпен жасалған",
+  "Build a tour": "Тур құрастыру",
+  Places: "Орындар",
+  Reviews: "Пікірлер",
+  "Verified trip": "Расталған сапар",
+};
 const Context = createContext<{
-  lang: "en" | "ru";
-  setLang: (v: "en" | "ru") => void;
+  lang: Lang;
+  setLang: (v: Lang) => void;
 }>({ lang: "en", setLang: () => {} });
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, set] = useState<"en" | "ru">("en");
+  const [lang, set] = useState<Lang>("en");
   useEffect(() => {
     const saved = localStorage.getItem("almaty-language");
-    const value =
-      saved === "ru" || (!saved && navigator.language.startsWith("ru"))
-        ? "ru"
-        : "en";
+    const browser = navigator.language;
+    const value: Lang =
+      saved === "ru" || saved === "kk" || saved === "en"
+        ? saved
+        : browser.startsWith("kk")
+          ? "kk"
+          : browser.startsWith("ru")
+            ? "ru"
+            : "en";
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs browser-only state (URL, storage, clock) or an async fetch result after hydration
     set(value);
     document.documentElement.lang = value;
   }, []);
-  const setLang = (value: "en" | "ru") => {
+  const setLang = (value: Lang) => {
     set(value);
     localStorage.setItem("almaty-language", value);
     document.documentElement.lang = value;
@@ -198,25 +220,43 @@ export function useLanguage() {
 export function useT() {
   const { lang } = useLanguage();
   return useCallback(
-    (text: string) => (lang === "ru" ? words[text] || text : text),
+    (text: string) =>
+      lang === "en" ? text : (lang === "kk" && kk[text]) || words[text] || text,
     [lang],
   );
 }
-export function T({ children, ru }: { children: string; ru?: string }) {
+export function T({
+  children,
+  ru,
+  kk: kazakh,
+}: {
+  children: string;
+  ru?: string;
+  kk?: string;
+}) {
   const { lang } = useLanguage();
-  return <>{lang === "ru" ? ru || words[children] || children : children}</>;
+  if (lang === "en") return <>{children}</>;
+  if (lang === "kk") return <>{kazakh || kk[children] || ru || words[children] || children}</>;
+  return <>{ru || words[children] || children}</>;
+}
+/** Picks the best available translation: kk → ru → en. */
+export function pick(lang: Lang, text: { en: string; ru?: string; kk?: string }) {
+  if (lang === "kk") return text.kk || text.ru || text.en;
+  if (lang === "ru") return text.ru || text.en;
+  return text.en;
 }
 export function LanguageSwitch() {
   const { lang, setLang } = useLanguage();
   return (
-    <button
+    <select
       className="hub-language"
-      onClick={() => setLang(lang === "en" ? "ru" : "en")}
-      aria-label={
-        lang === "en" ? "Switch to Russian" : "Переключить на английский"
-      }
+      value={lang}
+      onChange={(e) => setLang(e.target.value as Lang)}
+      aria-label="Language / Язык / Тіл"
     >
-      {lang === "en" ? "EN / РУ" : "РУ / EN"}
-    </button>
+      <option value="en">EN</option>
+      <option value="ru">РУ</option>
+      <option value="kk">ҚАЗ</option>
+    </select>
   );
 }

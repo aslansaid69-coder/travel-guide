@@ -1,15 +1,19 @@
 "use client";
 import { useState } from "react";
-import {
-  Shell,
-  useResource,
-  Button,
-  Field,
-  Status,
-  Money,
-  platform,
-} from "./shared";
-const empty = {
+import { Shell, useResource, Button, Field, Status, Money } from "./shared";
+import type { Guide } from "@/lib/platform/types";
+import type { GuideCandidate, GuidesAdminView } from "./view-types";
+type GuideDraft = Omit<
+  Guide,
+  "languages" | "specialties" | "rateType" | "currency" | "status"
+> & {
+  languages: string[];
+  specialties: string[];
+  rateType: string;
+  currency: string;
+  status: string;
+};
+const empty: GuideDraft = {
   id: "",
   name: "",
   email: "",
@@ -17,11 +21,16 @@ const empty = {
   photo: "",
   bio: "",
   bioRu: "",
+  bioKk: "",
+  experienceYears: 0,
+  rating: null,
+  telegram: "",
+  whatsapp: "",
   languages: ["en"],
   specialties: ["history"],
   areas: ["Almaty"],
   certifications: [],
-  rateType: "tour",
+  rateType: "day",
   rateMinor: 0,
   currency: "KZT",
   commissionPercent: 20,
@@ -29,10 +38,10 @@ const empty = {
   status: "draft",
 };
 export function GuidesAdmin() {
-  const s = useResource("admin/guides"),
-    [edit, setEdit] = useState<any>(null),
+  const s = useResource<GuidesAdminView>("admin/guides"),
+    [edit, setEdit] = useState<GuideDraft | null>(null),
     [requestId, setRequestId] = useState(""),
-    [matches, setMatches] = useState<any[]>([]);
+    [matches, setMatches] = useState<GuideCandidate[]>([]);
   const owner = s.data?.staff?.role === "owner";
   return (
     <Shell
@@ -54,7 +63,7 @@ export function GuidesAdmin() {
               }}
             >
               <option value="">Choose a request</option>
-              {s.data?.requests.map((r: any) => (
+              {s.data?.requests.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.date} · {r.name} · {r.currency} · {r.status}
                 </option>
@@ -67,7 +76,7 @@ export function GuidesAdmin() {
               disabled={!requestId}
               onClick={async () => {
                 const r = await s.run({ action: "candidates", requestId });
-                setMatches(r?.guides || []);
+                setMatches((r?.guides as GuideCandidate[] | undefined) || []);
               }}
             >
               Suggest available guides
@@ -129,7 +138,7 @@ export function GuidesAdmin() {
                 </tr>
               </thead>
               <tbody>
-                {s.data?.guides.map((g: any) => (
+                {s.data?.guides.map((g) => (
                   <tr key={g.id}>
                     <td>
                       {g.data.name}
@@ -205,17 +214,19 @@ export function GuidesAdmin() {
             }}
           >
             <div className="platform-form-row">
-              {[
-                ["id", "Profile ID"],
-                ["name", "Full name"],
-                ["email", "Invitation email"],
-                ["phone", "Private phone"],
-                ["photo", "Licensed photo URL"],
-                ["country", "Actual country (ISO, e.g. KZ)"],
-              ].map(([key, label]) => (
+              {(
+                [
+                  ["id", "Profile ID"],
+                  ["name", "Full name"],
+                  ["email", "Invitation email"],
+                  ["phone", "Private phone"],
+                  ["photo", "Licensed photo URL"],
+                  ["country", "Actual country (ISO, e.g. KZ)"],
+                ] as const
+              ).map(([key, label]) => (
                 <Field label={label} key={key}>
                   <input
-                    required={["id", "name", "email", "country"].includes(key)}
+                    required={key !== "phone" && key !== "photo"}
                     type={key === "email" ? "email" : "text"}
                     value={edit[key]}
                     onChange={(e) =>
@@ -238,6 +249,52 @@ export function GuidesAdmin() {
                   onChange={(e) => setEdit({ ...edit, bioRu: e.target.value })}
                 />
               </Field>
+              <Field label="Kazakh biography">
+                <textarea
+                  value={edit.bioKk}
+                  onChange={(e) => setEdit({ ...edit, bioKk: e.target.value })}
+                />
+              </Field>
+            </div>
+            <div className="platform-form-row">
+              <Field label="Experience (years)">
+                <input
+                  type="number"
+                  min="0"
+                  max="70"
+                  value={edit.experienceYears}
+                  onChange={(e) =>
+                    setEdit({ ...edit, experienceYears: Number(e.target.value) })
+                  }
+                />
+              </Field>
+              <Field label="Starting rating (0–5, optional)">
+                <input
+                  type="number"
+                  min="0"
+                  max="5"
+                  step="0.1"
+                  value={edit.rating ?? ""}
+                  onChange={(e) =>
+                    setEdit({
+                      ...edit,
+                      rating: e.target.value === "" ? null : Number(e.target.value),
+                    })
+                  }
+                />
+              </Field>
+              <Field label="Telegram">
+                <input
+                  value={edit.telegram}
+                  onChange={(e) => setEdit({ ...edit, telegram: e.target.value })}
+                />
+              </Field>
+              <Field label="WhatsApp">
+                <input
+                  value={edit.whatsapp}
+                  onChange={(e) => setEdit({ ...edit, whatsapp: e.target.value })}
+                />
+              </Field>
             </div>
             <fieldset>
               <legend>Languages</legend>
@@ -251,7 +308,7 @@ export function GuidesAdmin() {
                       setEdit({
                         ...edit,
                         languages: edit.languages.includes(v)
-                          ? edit.languages.filter((x: string) => x !== v)
+                          ? edit.languages.filter((x) => x !== v)
                           : [...edit.languages, v],
                       })
                     }
@@ -280,7 +337,7 @@ export function GuidesAdmin() {
                       setEdit({
                         ...edit,
                         specialties: edit.specialties.includes(v)
-                          ? edit.specialties.filter((x: string) => x !== v)
+                          ? edit.specialties.filter((x) => x !== v)
                           : [...edit.specialties, v],
                       })
                     }
@@ -316,7 +373,7 @@ export function GuidesAdmin() {
                   }
                 />
               </Field>
-              <Field label="Rate in major currency units">
+              <Field label="Rate (e.g. day rate in tenge)">
                 <input
                   type="number"
                   min="0"
@@ -337,6 +394,7 @@ export function GuidesAdmin() {
                     setEdit({ ...edit, rateType: e.target.value })
                   }
                 >
+                  <option value="day">Per day</option>
                   <option value="tour">Per tour</option>
                   <option value="hour">Per hour of planned stops</option>
                 </select>
@@ -404,7 +462,7 @@ export function GuidesAdmin() {
           <Field label="Guide">
             <select name="guide" required>
               <option value="">Choose</option>
-              {s.data?.guides.map((g: any) => (
+              {s.data?.guides.map((g) => (
                 <option value={g.id} key={g.id}>
                   {g.data.name}
                 </option>
@@ -425,9 +483,9 @@ export function GuidesAdmin() {
         </form>
         <details className="platform-detail">
           <summary>All availability windows</summary>
-          {s.data?.calendar.map((c: any) => (
+          {s.data?.calendar.map((c) => (
             <p key={c.id}>
-              {s.data.guides.find((g: any) => g.id === c.guide_id)?.data.name} ·{" "}
+              {s.data?.guides.find((g) => g.id === c.guide_id)?.data.name} ·{" "}
               {c.blocked ? "Blocked" : "Available"} ·{" "}
               {new Date(c.starts_at).toLocaleString()} —{" "}
               {new Date(c.ends_at).toLocaleString()}
@@ -449,16 +507,13 @@ export function GuidesAdmin() {
               </tr>
             </thead>
             <tbody>
-              {s.data?.assignments.map((a: any) => (
+              {s.data?.assignments.map((a) => (
                 <tr key={a.id}>
                   <td>
                     <a href={`/tour/${a.request_id}`}>{a.client}</a>
                   </td>
                   <td>
-                    {
-                      s.data.guides.find((g: any) => g.id === a.guide_id)?.data
-                        .name
-                    }
+                    {s.data?.guides.find((g) => g.id === a.guide_id)?.data.name}
                   </td>
                   <td>
                     {new Date(a.starts_at).toLocaleString()} —{" "}
@@ -505,7 +560,7 @@ export function GuidesAdmin() {
       </section>
       <section className="platform-card platform-detail">
         <h2>Reviews & follow-up proposals</h2>
-        {s.data?.reviews.map((r: any) => (
+        {s.data?.reviews.map((r) => (
           <div key={r.id} className="platform-evidence">
             <p>
               {r.guide} · {r.rating}/5 · {r.status}
@@ -529,7 +584,7 @@ export function GuidesAdmin() {
             </div>
           </div>
         ))}
-        {s.data?.followups.map((f: any) => (
+        {s.data?.followups.map((f) => (
           <article key={f.id} className="platform-evidence">
             <h3>
               {f.data.plan.title} · {f.status}
@@ -580,7 +635,9 @@ export function GuidesAdmin() {
                     min="0"
                     step="0.01"
                     required
-                    defaultValue={f.data.quote?.amountMinor / 100 || ""}
+                    defaultValue={
+                      f.data.quote ? f.data.quote.amountMinor / 100 : ""
+                    }
                   />
                 </Field>
                 <Field label="Settlement currency">
@@ -588,7 +645,7 @@ export function GuidesAdmin() {
                     name="currency"
                     defaultValue={
                       f.data.quote?.currency ||
-                      s.data.guides.find((g: any) => g.id === f.guide_id)?.data
+                      s.data?.guides.find((g) => g.id === f.guide_id)?.data
                         .currency ||
                       "KZT"
                     }

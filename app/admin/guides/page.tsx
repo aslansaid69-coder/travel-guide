@@ -9,6 +9,6 @@ export const metadata = {
 export default async function Page() {
   const staff = await staffSession();
   if (!staff) redirect("/auth/sign-in");
-  if (!["owner", "manager"].includes(staff.role)) redirect("/account");
+  if (!["owner", "admin"].includes(staff.role)) redirect("/account");
   return <GuidesAdmin />;
 }

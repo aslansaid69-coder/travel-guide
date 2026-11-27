@@ -102,6 +102,8 @@ export function mealPrice(item: CatalogItem): Price | null {
     source: "estimated",
     updatedAt: item.menuUpdatedAt,
     note: "Estimated one to two menu items per guest; drinks and extras may vary.",
+    sourceUrl: "",
+    checkedAt: "",
   };
 }
 export type PriceLine = {

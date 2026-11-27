@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { ThemeToggle } from "@/components/ui/theme";
 import { useEffect, useState } from "react";
 import { MountainSnow, ArrowUpRight } from "lucide-react";
@@ -6,24 +7,27 @@ import { LanguageSwitch, T, useT } from "./language";
 export function HubHeader() {
   return (
     <header className="hub-header">
-      <a className="brand" href="/">
+      <Link className="brand" href="/">
         <MountainSnow size={30} />
         <span>
           almaty<span className="brand-dot">.</span>
           <small>WITH LOVE</small>
         </span>
-      </a>
+      </Link>
       <nav aria-label="Travel hub">
         <a href="/explore">
           <T>Explore</T>
         </a>
+        <Link href="/build">
+          <T ru="Собрать тур">Build a tour</T>
+        </Link>
         <a href="/plan">
           <T>Plan your trip</T>
         </a>
         <a href="/account">
           <T>My plans</T>
         </a>
-        <a href="/guides">Guides</a>
+        <Link href="/guides">Guides</Link>
         <LanguageSwitch />
         <ThemeToggle />
       </nav>
@@ -33,9 +37,9 @@ export function HubHeader() {
 export function HubFooter() {
   return (
     <footer className="hub-footer">
-      <a href="/">
+      <Link href="/">
         <T>Return to the guide</T>
-      </a>
+      </Link>
       <a href="/emergency">
         <T>Emergency help</T>
       </a>
@@ -75,6 +79,7 @@ export function Consent() {
   const [shown, setShown] = useState(false);
   const t = useT();
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs browser-only state (URL, storage, clock) or an async fetch result after hydration
     setShown(!localStorage.getItem("almaty-analytics"));
     if (localStorage.getItem("almaty-analytics") === "yes") track("visitor");
     if ("serviceWorker" in navigator)

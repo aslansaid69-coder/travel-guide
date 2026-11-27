@@ -1,14 +1,36 @@
+import type { Guest, Plan } from "@/lib/hub/types";
 import { database } from "@/lib/db";
-import { getPlan, editable, audit, notify, privateLink } from "@/lib/hub/store";
+import { editable, notify, privateLink } from "@/lib/hub/store";
 import { clientSession, staffSession } from "@/lib/hub/access";
 import { HttpError, hash } from "@/lib/hub/security";
 import {
   commerceSchema,
   commerceDefaults,
   type CommerceSettings,
-  type Guide,
   guideSchema,
 } from "./types";
+/** Row returned by the booking() access query (hub_requests joined with plan/quote). */
+export type BookingRecord = {
+  id: string;
+  plan_id: string;
+  status: string;
+  intent: string;
+  guest: Guest;
+  plan: Plan;
+  plan_version: number;
+  client_id: string | null;
+  quote_plan: Plan | null;
+  quoted_version: number | null;
+  assigned_to: string | null;
+  quote_id: string | null;
+  payment_status: string;
+  paid_minor: number | string;
+  currency: string;
+  version: number;
+  created_at: string;
+  updated_at: string;
+  cancelled_at: string | null;
+};
 export async function commerceSettings(): Promise<CommerceSettings> {
   const r = await database()`SELECT data FROM platform_settings WHERE id=true`;
   return r[0] ? commerceSchema.parse(r[0].data) : commerceDefaults;
@@ -24,13 +46,13 @@ export async function booking(
   const sql = database();
   const r = (
     await sql`SELECT r.*,p.data AS plan,p.version AS plan_version,p.client_id,q.plan AS quote_plan,q.plan_version AS quoted_version FROM hub_requests r JOIN hub_plans p ON p.id=r.plan_id LEFT JOIN hub_quotes q ON q.id=r.quote_id WHERE r.id=${id}`
-  )[0];
+  )[0] as BookingRecord | undefined;
   if (!r) throw new HttpError(404, "Booking not found.");
   const staff = await staffSession();
   if (
     options.staff !== false &&
     staff &&
-    ["owner", "manager"].includes(staff.role)
+    ["owner", "admin"].includes(staff.role)
   )
     return { request: r, actor: staff.id, role: staff.role, staff };
   if (options.guide !== false && staff?.role === "guide") {
@@ -58,7 +80,7 @@ export async function ownedGuide(id?: string) {
   if (!staff) throw new HttpError(401, "Guide sign-in is required.");
   const sql = database();
   const row =
-    (staff.role === "owner" || staff.role === "manager") && id
+    (staff.role === "owner" || staff.role === "admin") && id
       ? (await sql`SELECT * FROM guides WHERE id=${id}`)[0]
       : (
           await sql`SELECT * FROM guides WHERE user_id=${staff.id} AND status<>'removed'`
@@ -67,10 +89,13 @@ export async function ownedGuide(id?: string) {
     throw new HttpError(403, "Guide profile not assigned to this account.");
   return { staff, row, guide: guideSchema.parse(row.data) };
 }
-export function contactUnlocked(r: Record<string, any>) {
+export function contactUnlocked(r: {
+  paid_minor?: unknown;
+  payment_status?: unknown;
+}) {
   return (
     Number(r.paid_minor) > 0 ||
-    ["voucher-paid", "cash-paid"].includes(r.payment_status)
+    ["voucher-paid", "cash-paid"].includes(String(r.payment_status))
   );
 }
 export function scrubContacts(v: string) {
@@ -85,7 +110,11 @@ export function scrubContacts(v: string) {
       "[contact available after payment]",
     );
 }
-export function publicGuide(row: Record<string, any>) {
+export function publicGuide(row: {
+  data?: unknown;
+  rating?: unknown;
+  review_count?: unknown;
+}) {
   const g = guideSchema.parse(row.data);
   return {
     id: g.id,
@@ -100,7 +129,9 @@ export function publicGuide(row: Record<string, any>) {
     rateType: g.rateType,
     rateMinor: g.rateMinor,
     currency: g.currency,
-    rating: row.rating ? Number(row.rating) : null,
+    bioKk: scrubContacts(g.bioKk),
+    experienceYears: g.experienceYears,
+    rating: row.rating ? Number(row.rating) : g.rating,
     reviewCount: Number(row.review_count || 0),
   };
 }

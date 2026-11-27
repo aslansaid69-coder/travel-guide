@@ -6,12 +6,7 @@ import { database } from "@/lib/db";
 import { siteUrl } from "@/lib/site";
 import { revalidatePath } from "next/cache";
 import { getWeather } from "@/lib/weather/read";
-import {
-  clientSession,
-  requireStaff,
-  staffSession,
-  partnerCan,
-} from "./access";
+import { clientSession, requireStaff, partnerCan } from "./access";
 import {
   origin,
   body,
@@ -43,10 +38,9 @@ import {
   settingsSchema,
   menuItemSchema,
   stages,
-  type Plan,
 } from "./types";
-import { estimate, conflicts } from "./core";
-import { createRequest, checkout, confirmArrival, planSlots } from "./bookings";
+import { estimate } from "./core";
+import { createRequest, planSlots } from "./bookings";
 import { discoverOSM, discoverGoogle, googleDetails } from "./discovery";
 import { planPdf } from "./pdf";
 import { parseMenuText, parseMenuAI } from "./menu";
@@ -167,7 +161,7 @@ export async function handle(request: Request, path: string[]) {
           await sql`SELECT rating,body,created_at FROM hub_reviews WHERE status='approved' ORDER BY created_at DESC LIMIT 30`,
       });
     if (resource === "admin") {
-      const staff = await requireStaff(["owner", "manager", "partner"]);
+      const staff = await requireStaff(["owner", "admin", "partner"]);
       const items = await catalog(true);
       if (staff.role === "partner")
         return json({
@@ -241,7 +235,7 @@ export async function handle(request: Request, path: string[]) {
   }
   origin(request);
   if (resource === "menu-import") {
-    const staff = await requireStaff(["owner", "manager", "partner"]);
+    const staff = await requireStaff(["owner", "admin", "partner"]);
     await limit(request, "menu-import", 20);
     if (request.headers.get("content-type")?.includes("multipart/form-data")) {
       if (Number(request.headers.get("content-length") || 0) > 4500000)
@@ -424,7 +418,7 @@ export async function handle(request: Request, path: string[]) {
     return json({ ok: true });
   }
   if (resource === "admin") {
-    const staff = await requireStaff(["owner", "manager", "partner"]);
+    const staff = await requireStaff(["owner", "admin", "partner"]);
     if (b.action === "menu") {
       const itemId = value(b.itemId, 120);
       if (!partnerCan(staff, itemId))
@@ -447,7 +441,7 @@ export async function handle(request: Request, path: string[]) {
         staff.role === "owner" ? value(b.assignedTo || "", 100) : r.assigned_to;
       if (assigned) {
         const allowed =
-          await sql`SELECT role FROM staff_roles WHERE user_id=${assigned} AND role IN ('owner','manager')`;
+          await sql`SELECT role FROM staff_roles WHERE user_id=${assigned} AND role IN ('owner','admin','manager')`;
         if (!allowed.length)
           throw new HttpError(400, "Choose an approved manager.");
       }
@@ -708,7 +702,7 @@ export async function handle(request: Request, path: string[]) {
     }
     if (b.action === "staff") {
       const email = z.email().parse(b.email),
-        role = z.enum(["manager", "partner"]).parse(b.role);
+        role = z.enum(["admin", "partner"]).parse(b.role);
       const user = (
         await sql`SELECT id,email FROM neon_auth."user" WHERE lower(email)=lower(${email}) AND "emailVerified"=true`
       )[0];

@@ -3,13 +3,20 @@ import { boundedBody } from "@/lib/updates/body";
 import { catalog } from "./store";
 import { hash, HttpError } from "./security";
 import { km } from "./core";
-export async function routeFor(ids: string[]) {
+export type RouteResult = {
+  estimated: boolean;
+  source: string;
+  /** [lng, lat] pairs along the route. */
+  coordinates: number[][];
+  legs: { distance: number; duration: number }[];
+};
+export async function routeFor(ids: string[]): Promise<RouteResult> {
   const items = await catalog(),
     stops = ids.map((id) => items.find((i) => i.id === id));
   if (stops.some((i) => !i))
     throw new HttpError(400, "Use approved catalog stops for routing.");
   const places = stops.filter((i): i is NonNullable<typeof i> => !!i);
-  const fallback = {
+  const fallback: RouteResult = {
     estimated: true,
     source:
       "Straight-line distance × 1.35 at 25 km/h; allow for traffic and mountain roads.",
@@ -26,7 +33,7 @@ export async function routeFor(ids: string[]) {
     key = hash(JSON.stringify(places.map((i) => [i.lat, i.lng])));
   const cache =
     await sql`SELECT data FROM hub_route_cache WHERE id=${key} AND expires_at>now()`;
-  if (cache[0]) return cache[0].data;
+  if (cache[0]) return cache[0].data as RouteResult;
   try {
     await sql`INSERT INTO hub_provider_usage(provider,requests) VALUES('openrouteservice',1) ON CONFLICT(provider,day) DO UPDATE SET requests=hub_provider_usage.requests+1`;
     const r = await fetch(
@@ -53,7 +60,7 @@ export async function routeFor(ids: string[]) {
       !Array.isArray(f?.properties?.segments)
     )
       throw new Error("Route invalid");
-    const result = {
+    const result: RouteResult = {
       estimated: false,
       source:
         "© openrouteservice.org by HeiGIT | © OpenStreetMap contributors. Driving estimates vary with traffic.",

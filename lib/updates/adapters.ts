@@ -10,7 +10,6 @@ import { readSnapshot } from "./store";
 import { boundedBody } from "./body";
 import { createHash } from "node:crypto";
 import seedEvents from "@/data/events.json";
-import seedPlaces from "@/data/places.json";
 import eventSources from "@/data/event-sources.json";
 import extraSources from "@/data/update-sources.json";
 import {

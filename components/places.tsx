@@ -1,4 +1,5 @@
 "use client";
+import type { CatalogItem } from "@/lib/hub/types";
 import { useLanguage, T } from "@/components/hub/language";
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -23,7 +24,7 @@ export function Places() {
           setPlaces(
             data.items
               .filter((i: { image: string }) => !!i.image)
-              .map((i: any) => ({
+              .map((i: CatalogItem) => ({
                 ...i,
                 label: i.label || i.category.toUpperCase(),
                 category:

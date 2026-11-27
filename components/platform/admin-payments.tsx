@@ -1,15 +1,21 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Shell, useResource, Button, Field, Status, Money } from "./shared";
+import type { CommerceSettings } from "@/lib/platform/types";
+import type { CommerceAdminView } from "./view-types";
+type NumericSetting = {
+  [K in keyof CommerceSettings]: CommerceSettings[K] extends number ? K : never;
+}[keyof CommerceSettings];
 export function PaymentsAdmin() {
-  const s = useResource("admin/commerce"),
-    [config, setConfig] = useState<any>(null),
-    [link, setLink] = useState<any>(null),
+  const s = useResource<CommerceAdminView>("admin/commerce"),
+    [edited, setConfig] = useState<CommerceSettings | null>(null),
+    [link, setLink] = useState<{ url: string; whatsapp?: string } | null>(null),
     [cashId, setCashId] = useState(() => crypto.randomUUID());
-  useEffect(() => {
-    if (s.data?.settings && !config) setConfig(s.data.settings);
-  }, [s.data, config]);
-  const change = (k: string, v: unknown) => setConfig({ ...config, [k]: v });
+  const config = edited ?? s.data?.settings ?? null;
+  const change = <K extends keyof CommerceSettings>(
+    k: K,
+    v: CommerceSettings[K],
+  ) => config && setConfig({ ...config, [k]: v });
   return (
     <Shell
       title="Every booking, accounted for."
@@ -49,7 +55,7 @@ export function PaymentsAdmin() {
                   </tr>
                 </thead>
                 <tbody>
-                  {s.data.requests.map((r: any) => (
+                  {s.data.requests.map((r) => (
                     <tr key={r.id}>
                       <td>
                         {r.name}
@@ -60,7 +66,10 @@ export function PaymentsAdmin() {
                         {r.status} · {r.payment_status}
                       </td>
                       <td>
-                        <Money amount={r.paid_minor} currency={r.currency} />
+                        <Money
+                          amount={Number(r.paid_minor)}
+                          currency={r.currency}
+                        />
                       </td>
                       <td>
                         <div className="platform-actions">
@@ -72,7 +81,10 @@ export function PaymentsAdmin() {
                                 requestId: r.id,
                                 stay: true,
                               });
-                              if (result) setLink(result);
+                              if (result?.url)
+                                setLink(
+                                  result as { url: string; whatsapp?: string },
+                                );
                             }}
                           >
                             Create & email payment link
@@ -154,26 +166,31 @@ export function PaymentsAdmin() {
                 }}
               >
                 <div className="platform-form-row">
-                  {[
-                    ["taxBps", "Tax rate (basis points; 1200 = 12%)"],
-                    ["feeMinor", "Included service fee (minor units)"],
+                  {(
                     [
-                      "freeCancellationHours",
-                      "Free cancellation window (hours)",
-                    ],
-                    ["lateRefundPercent", "Late refund (%)"],
-                    [
-                      "payoutDelayHours",
-                      "Guide transfer delay after trip (hours)",
-                    ],
-                    ["referralRewardMinor", "Referral credit (minor units)"],
-                    [
-                      "returningDiscountPercent",
-                      "Returning traveller discount (%)",
-                    ],
-                    ["maxPeakPercent", "Maximum peak-day increase (%)"],
-                    ["maxSlowDiscount", "Maximum slow-day discount (%)"],
-                  ].map(([key, label]) => (
+                      ["taxBps", "Tax rate (basis points; 1200 = 12%)"],
+                      ["feeMinor", "Included service fee (minor units)"],
+                      [
+                        "freeCancellationHours",
+                        "Free cancellation window (hours)",
+                      ],
+                      ["lateRefundPercent", "Late refund (%)"],
+                      [
+                        "payoutDelayHours",
+                        "Guide transfer delay after trip (hours)",
+                      ],
+                      ["referralRewardMinor", "Referral credit (minor units)"],
+                      [
+                        "returningDiscountPercent",
+                        "Returning traveller discount (%)",
+                      ],
+                      ["maxPeakPercent", "Maximum peak-day increase (%)"],
+                      ["maxSlowDiscount", "Maximum slow-day discount (%)"],
+                    ] as const satisfies readonly (readonly [
+                      NumericSetting,
+                      string,
+                    ])[]
+                  ).map(([key, label]) => (
                     <Field label={label} key={key}>
                       <input
                         type="number"
@@ -345,7 +362,7 @@ export function PaymentsAdmin() {
                 A gift voucher is owner-issued credit. This screen does not sell
                 vouchers or charge a card.
               </p>
-              {s.data.codes.map((c: any) => (
+              {s.data.codes.map((c) => (
                 <p key={c.code}>
                   <strong>{c.code}</strong> · {c.data.kind} · {c.uses}/
                   {c.data.maxUses} uses · balance{" "}
@@ -431,7 +448,7 @@ export function PaymentsAdmin() {
               />
               <Button busy={s.busy}>Release / safely retry allocation</Button>
             </form>
-            {s.data.transfers.map((t: any) => (
+            {s.data.transfers.map((t) => (
               <p key={t.id}>
                 <span className="platform-code">{t.assignment_id}</span> ·{" "}
                 <Money amount={t.amount_minor} currency={t.currency} /> ·{" "}
@@ -470,8 +487,8 @@ export function PaymentsAdmin() {
                 <select name="requestId" required>
                   <option value="">Choose</option>
                   {s.data.requests
-                    .filter((r: any) => r.status === "confirmed")
-                    .map((r: any) => (
+                    .filter((r) => r.status === "confirmed")
+                    .map((r) => (
                       <option key={r.id} value={r.id}>
                         {r.name} · {r.currency} · {r.id}
                       </option>
@@ -518,8 +535,8 @@ export function PaymentsAdmin() {
                 <select name="requestId" required>
                   <option value="">Choose</option>
                   {s.data.requests
-                    .filter((r: any) => r.status === "cancelled")
-                    .map((r: any) => (
+                    .filter((r) => r.status === "cancelled")
+                    .map((r) => (
                       <option key={r.id} value={r.id}>
                         {r.name} · {r.currency} · {r.id}
                       </option>
@@ -538,7 +555,7 @@ export function PaymentsAdmin() {
               <Button busy={s.busy}>Record cash refund</Button>
             </form>
             <h2 className="platform-detail">Refund ledger</h2>
-            {s.data.refunds.map((r: any) => (
+            {s.data.refunds.map((r) => (
               <p key={r.id}>
                 {r.request_id} · {r.amount_minor / 100} · {r.status} ·{" "}
                 {r.reason}
@@ -549,7 +566,7 @@ export function PaymentsAdmin() {
           <div className="platform-two platform-detail">
             <section className="platform-card">
               <h2>Operations history</h2>
-              {s.data.jobs.map((j: any) => (
+              {s.data.jobs.map((j) => (
                 <details className="platform-detail" key={j.key}>
                   <summary>
                     {new Date(j.created_at).toLocaleString()} · {j.status}
@@ -562,7 +579,7 @@ export function PaymentsAdmin() {
             </section>
             <section className="platform-card">
               <h2>API usage · 30 days</h2>
-              {s.data.usage.map((u: any) => (
+              {s.data.usage.map((u) => (
                 <p key={u.provider}>
                   {u.provider} · {u.requests} requests
                 </p>

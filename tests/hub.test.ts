@@ -53,6 +53,8 @@ test("pricing uses integer minor units, adult/child prices, markup, season and g
         source: "owner-confirmed",
         updatedAt: "2026-11-16",
         note: "",
+        sourceUrl: "",
+        checkedAt: "",
       },
     });
   const e = estimate(
@@ -82,6 +84,8 @@ test("unknown and unavailable exchange prices remain unpriced instead of free", 
       source: "estimated",
       updatedAt: "2026-11-16",
       note: "",
+      sourceUrl: "",
+      checkedAt: "",
     },
   });
   const e = estimate(plan(), [i], defaultSettings, null);
@@ -99,6 +103,8 @@ test("currency conversion is indicative and does not change base settlement numb
       source: "owner-confirmed",
       updatedAt: "2026-11-16",
       note: "",
+      sourceUrl: "",
+      checkedAt: "",
     },
   });
   const e = estimate(plan({ currency: "EUR" }), [i], defaultSettings, {

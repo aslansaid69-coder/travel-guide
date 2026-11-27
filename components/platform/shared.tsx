@@ -2,7 +2,18 @@
 import { useState, useEffect, useCallback } from "react";
 import { HubHeader, HubFooter } from "@/components/hub/shared";
 import { useLanguage } from "@/components/hub/language";
-export async function platform(path: string, data?: unknown, key?: string) {
+export type PlatformResult = {
+  url?: string;
+  planId?: string;
+  editToken?: string;
+  message?: string;
+  error?: string;
+};
+export async function platform<T = PlatformResult>(
+  path: string,
+  data?: unknown,
+  key?: string,
+): Promise<T> {
   const r = await fetch("/api/platform/" + path, {
     method: data ? "POST" : "GET",
     headers: {
@@ -14,7 +25,7 @@ export async function platform(path: string, data?: unknown, key?: string) {
   });
   const result = await r.json();
   if (!r.ok) throw new Error(result.error || "Please try again.");
-  return result;
+  return result as T;
 }
 export function usePrivate() {
   const [access, set] = useState({ ready: false, key: "", planId: "" });
@@ -29,26 +40,27 @@ export function usePrivate() {
     if (key && planId) localStorage.setItem(`almaty-key-${planId}`, key);
     if (f.has("edit"))
       history.replaceState(null, "", location.pathname + location.search);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs browser-only state (URL, storage, clock) or an async fetch result after hydration
     set({ ready: true, key, planId });
   }, []);
   return access;
 }
-export function useResource(
+export function useResource<T>(
   path: string,
   key?: string,
   ready = true,
-  initial: any = null,
+  initial: T | null = null,
 ) {
-  const [data, setData] = useState<any>(initial),
+  const [data, setData] = useState<T | null>(initial),
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false);
-  const load = useCallback(async () => {
-    try {
-      setData(await platform(path, undefined, key));
-    } catch (e) {
-      setMessage((e as Error).message);
-    }
-  }, [path, key]);
+  const load = useCallback(
+    () =>
+      platform<T>(path, undefined, key).then(setData, (e: Error) =>
+        setMessage(e.message),
+      ),
+    [path, key],
+  );
   useEffect(() => {
     if (ready) void load();
   }, [load, ready]);
@@ -56,10 +68,14 @@ export function useResource(
     setBusy(true);
     setMessage("");
     try {
-      const result = await platform(path, input, key);
+      const result = await platform<PlatformResult & Record<string, unknown>>(
+        path,
+        input,
+        key,
+      );
       if (result.planId && result.editToken)
         localStorage.setItem(`almaty-key-${result.planId}`, result.editToken);
-      if (result.url && !(input as any)?.stay) {
+      if (result.url && !(input as { stay?: boolean } | null)?.stay) {
         window.location.assign(result.url);
         return result;
       }

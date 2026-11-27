@@ -11,6 +11,10 @@ export const priceSchema = z
     source: z.enum(["owner-confirmed", "auto-detected", "estimated"]),
     updatedAt: text(40),
     note: text(300).default(""),
+    /** Where this price was published (official tariff page preferred). */
+    sourceUrl: text(800).default(""),
+    /** Date (YYYY-MM-DD) the source was last checked. */
+    checkedAt: text(10).default(""),
   })
   .refine((p) => p.max >= p.min, "Maximum must be at least minimum")
   .refine(
@@ -32,15 +36,35 @@ export const menuItemSchema = z.object({
   photo: text(800).default(""),
 });
 export type MenuItem = z.infer<typeof menuItemSchema>;
+export const photoSchema = z.object({
+  url: text(800).min(1),
+  alt: text(300).default(""),
+  author: text(300).default(""),
+  sourceUrl: text(800).default(""),
+  licence: text(200).default(""),
+  licenceUrl: text(800).default(""),
+  /** owner = uploaded/linked by staff; wikimedia/opentripmap = licensed import. */
+  provider: z.enum(["owner", "wikimedia", "opentripmap"]).default("owner"),
+});
+export type Photo = z.infer<typeof photoSchema>;
+export const slugSchema = text(120).regex(
+  /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+  "Use lowercase letters, digits and single hyphens",
+);
 export const itemSchema = z.object({
   id: text(120).regex(/^[a-zA-Z0-9_:-]+$/),
+  slug: z.union([slugSchema, z.literal("")]).default(""),
   name: text(180).min(1),
   nameRu: text(180).default(""),
+  nameKk: text(180).default(""),
+  region: text(120).default("Almaty"),
+  city: text(120).default("Almaty"),
   label: text(180).default(""),
   season: text(250).default(""),
   transport: text(1000).default(""),
   description: text(1800).default(""),
   descriptionRu: text(1800).default(""),
+  descriptionKk: text(1800).default(""),
   category: z.enum([
     "mountains",
     "viewpoint",
@@ -59,6 +83,8 @@ export const itemSchema = z.object({
   lng: z.number().min(-180).max(180),
   image: text(800).default(""),
   alt: text(300).default(""),
+  /** Gallery (cover = first). Google photos are never stored; they are shown live. */
+  photos: z.array(photoSchema).max(24).default([]),
   outdoor: z.boolean().default(true),
   duration: z.number().int().min(15).max(1440).default(90),
   hours: text(400).default(""),
@@ -76,6 +102,8 @@ export const itemSchema = z.object({
   rating: z.number().min(0).max(5).nullable().default(null),
   reviews: z.number().int().min(0).default(0),
   price: priceSchema.nullable().default(null),
+  /** unknown = not researched yet; not_found = researched, no reliable published price. */
+  priceStatus: z.enum(["unknown", "found", "not_found"]).default("unknown"),
   menu: z.array(menuItemSchema).max(300).default([]),
   menuCurrency: currencySchema.default("KZT"),
   menuUpdatedAt: text(40).default(""),
@@ -84,6 +112,9 @@ export const itemSchema = z.object({
   sourceUrl: text(800).default(""),
   source: text(200).default("Owner"),
   googlePlaceId: text(220).default(""),
+  /** Google allows caching coordinates for 30 days; refresh after this timestamp. */
+  googleFetchedAt: text(40).default(""),
+  openTripMapId: text(100).default(""),
   osmId: text(100).default(""),
   closed: z.boolean().default(false),
   bookable: z.boolean().default(false),
@@ -204,7 +235,7 @@ export type Rates = {
 export type Staff = {
   id: string;
   email: string;
-  role: "owner" | "manager" | "partner" | "guide";
+  role: "owner" | "admin" | "partner" | "guide";
   restaurantIds: string[];
   languages: string[];
 };

@@ -1,5 +1,4 @@
 import russian from "@/components/hub/ru-extra.json";
-import { z } from "zod";
 import { catalog } from "@/lib/hub/store";
 import { getWeather } from "@/lib/weather/read";
 import { boundedBody } from "@/lib/updates/body";

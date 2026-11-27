@@ -16,6 +16,47 @@ import {
 } from "@/lib/hub/types";
 import { cached, usage } from "./store";
 import type { ResearchDraft, ResearchField, Evidence } from "./types";
+
+type WikiPage = {
+  pageid: number;
+  title: string;
+  extract?: string;
+  fullurl?: string;
+  pageimage?: string;
+  coordinates?: { lat: number; lon: number }[];
+  langlinks?: { lang: string; title: string }[];
+  imageinfo?: {
+    url: string;
+    thumburl?: string;
+    descriptionurl: string;
+    extmetadata?: Record<string, { value?: string } | undefined>;
+  }[];
+};
+type WikiResponse = {
+  query?: {
+    pages?: WikiPage[];
+    search?: { pageid: number }[];
+    geosearch?: { pageid: number }[];
+  };
+};
+type LicensedPhoto = {
+  image: string;
+  credit: {
+    author: string;
+    sourceUrl: string;
+    licence: string;
+    licenceUrl: string;
+  };
+};
+type OsmElement = {
+  id: number;
+  type: string;
+  lat?: number;
+  lon?: number;
+  center?: { lat: number; lon: number };
+  tags?: Record<string, string>;
+};
+
 const agent =
   "AlmatyGuideResearchBot/2.0 (+https://almaty-travel-guide.vercel.app/credits)";
 const clean = (v: unknown, max = 1800) =>
@@ -82,7 +123,13 @@ async function pinned(
           Accept: "text/html,application/json,text/plain",
         },
         lookup: (_h, opts, cb) => {
-          if (opts.all) (cb as any)(null, addresses);
+          if (opts.all)
+            (
+              cb as unknown as (
+                err: null,
+                list: { address: string; family: number }[],
+              ) => void
+            )(null, addresses);
           else cb(null, addresses[0].address, 4);
         },
       },
@@ -177,10 +224,12 @@ export function robotsAllowed(text: string, path: string) {
         .map((p) => p.replace(/[.+?^{}()|[\]\\]/g, "\\$&"))
         .join(".*")
         .replace(/\\\$$/, "$");
-    let match = false;
+    let match: boolean;
     try {
       match = new RegExp(expression).test(path);
-    } catch {}
+    } catch {
+      match = false; // A malformed robots.txt pattern never grants access.
+    }
     if (match) {
       const score = r.pattern.replace(/[*$]/g, "").length;
       if (
@@ -238,9 +287,9 @@ export function extractOffers(
       v.slice(0, 100).forEach((x) => visit(x, depth + 1));
       return;
     }
-    const o = v as Record<string, any>,
-      types = Array.isArray(o["@type"]) ? o["@type"] : [o["@type"]];
-    if (types.some((t: string) => t === "Offer" || t === "AggregateOffer")) {
+    const o = v as Record<string, unknown>,
+      types: unknown[] = Array.isArray(o["@type"]) ? o["@type"] : [o["@type"]];
+    if (types.some((t) => t === "Offer" || t === "AggregateOffer")) {
       const numeric = (v: unknown) =>
         typeof v === "number" && Number.isFinite(v)
           ? v
@@ -297,13 +346,15 @@ export function extractOffers(
   for (const s of scripts) {
     try {
       visit(JSON.parse(s[1]));
-    } catch {}
+    } catch {
+      continue; // Invalid JSON-LD blocks are ignored; other blocks are still read.
+    }
   }
   return found;
 }
 async function wiki(host: string, params: Record<string, string>) {
   const key = `wiki:${host}:${hash(JSON.stringify(params))}`;
-  return cached<any>(key, 86400, async () => {
+  return cached<WikiResponse>(key, 86400, async () => {
     await usage("wikimedia");
     const url = new URL(`https://${host}/w/api.php`);
     for (const [k, v] of Object.entries({
@@ -324,7 +375,7 @@ async function wiki(host: string, params: Record<string, string>) {
   });
 }
 async function wikiPhotos(fileNames: string[]) {
-  if (!fileNames.length) return new Map<string, any>();
+  if (!fileNames.length) return new Map<string, LicensedPhoto>();
   const response = await wiki("commons.wikimedia.org", {
     prop: "imageinfo",
     iiprop: "url|extmetadata",
@@ -334,7 +385,7 @@ async function wikiPhotos(fileNames: string[]) {
       .map((f) => (f.startsWith("File:") ? f : "File:" + f))
       .join("|"),
   });
-  const map = new Map<string, any>();
+  const map = new Map<string, LicensedPhoto>();
   for (const p of response.query?.pages || []) {
     const i = p.imageinfo?.[0],
       m = i?.extmetadata;
@@ -381,8 +432,11 @@ export async function webLinks(query: string) {
   if (!r.ok) return [];
   const d = JSON.parse(await boundedBody(r, 200000));
   return (d.results || [])
-    .map((x: any) => ({ title: clean(x.title, 180), url: safeUrl(x.url) }))
-    .filter((x: any) => x.url);
+    .map((x: { title?: string; url?: string }) => ({
+      title: clean(x.title, 180),
+      url: safeUrl(x.url || ""),
+    }))
+    .filter((x: { url: string }) => x.url);
 }
 export function queryFromMaps(value: string) {
   if (!/^https:\/\//.test(value)) return { query: value, googlePlaceId: "" };
@@ -466,7 +520,7 @@ export async function research(
       );
     }
   }
-  let pages: any[] = [];
+  let pages: WikiPage[] = [];
   try {
     let ids: string[] = [];
     if (bulk) {
@@ -478,7 +532,7 @@ export async function research(
       });
       ids = (geo.query?.geosearch || [])
         .slice(0, 30)
-        .map((p: any) => String(p.pageid));
+        .map((p) => String(p.pageid));
       if (radiusKm > 10)
         warnings.push(
           "The Wikipedia fallback covers 10 km; wider discovery needs an available OSM/Places provider.",
@@ -491,7 +545,7 @@ export async function research(
       });
       ids = (search.query?.search || [])
         .slice(0, 3)
-        .map((p: any) => String(p.pageid));
+        .map((p) => String(p.pageid));
     }
     if (ids.length) {
       const data = await wiki("en.wikipedia.org", {
@@ -513,10 +567,10 @@ export async function research(
       "Wikimedia research is unavailable; existing drafts and published records are unchanged.",
     );
   }
-  let russianPages = new Map<string, any>();
+  let russianPages = new Map<string, WikiPage>();
   const russianTitles = pages
     .map((p) => p.langlinks?.[0]?.title)
-    .filter(Boolean);
+    .filter((t): t is string => !!t);
   if (russianTitles.length)
     try {
       const ru = await wiki("ru.wikipedia.org", {
@@ -527,7 +581,7 @@ export async function research(
         exchars: "1500",
       });
       russianPages = new Map(
-        (ru.query?.pages || []).map((p: any) => [p.title, p]),
+        (ru.query?.pages || []).map((p) => [p.title, p]),
       );
     } catch {
       warnings.push(
@@ -535,7 +589,7 @@ export async function research(
       );
     }
   const licensedPhotos = await wikiPhotos(
-    pages.map((p) => p.pageimage).filter(Boolean),
+    pages.map((p) => p.pageimage).filter((t): t is string => !!t),
   ).catch(() => new Map());
   const drafts: ResearchDraft[] = [];
   const existing = await catalog(true);
@@ -781,7 +835,7 @@ async function osmDrafts(query: string, category: string, radiusKm: number) {
           : category === "viewpoint"
             ? "[tourism=viewpoint]"
             : '[tourism~"attraction|museum|viewpoint"]';
-  const result = await cached<any>(
+  const result = await cached<{ elements?: OsmElement[] }>(
     `research:osm:${category}:${radiusKm}`,
     86400,
     () =>

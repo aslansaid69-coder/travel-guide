@@ -3,7 +3,7 @@ import { drainAlerts } from "@/lib/updates/alerts";
 import { unsubscribeToken } from "./newsletter";
 import { database } from "@/lib/db";
 import { siteUrl } from "@/lib/site";
-import { notify, settings, getPlan, catalog, privateLink } from "./store";
+import { notify, settings, catalog, privateLink } from "./store";
 import { getWeather } from "@/lib/weather/read";
 import { conflicts } from "./core";
 export async function drainNotifications() {

@@ -15,7 +15,6 @@ import {
   Plus,
   Trash2,
   RefreshCw,
-  Check,
   Save,
 } from "lucide-react";
 import type {
@@ -40,6 +39,23 @@ import { Catalog } from "./catalog";
 import { TravelMap } from "./map";
 import { api, track } from "./shared";
 import { useT, useLanguage } from "./language";
+import type { MessageRow, SlotRow } from "./admin-types";
+type PlannerWeather = Parameters<typeof conflicts>[2];
+type RequestDetail = {
+  request: { id: string; status: string; paymentStatus: string };
+  quote: {
+    id: string;
+    amount_minor: number | string;
+    currency: string;
+    deposit_percent: number;
+    status: string;
+    terms: string;
+    plan_version: number;
+    expires_at: string;
+    breakdown?: { adjustmentNote?: string };
+  } | null;
+  messages: MessageRow[];
+};
 const blank = (): Plan => ({
   title: "My Almaty escape",
   startDate: localDay(Date.now() / 1000),
@@ -58,8 +74,8 @@ export function Planner({ initial, id }: { initial?: Plan; id?: string }) {
     [items, setItems] = useState<CatalogItem[]>([]),
     [config, setConfig] = useState<HubSettings>(defaultSettings),
     [rates, setRates] = useState<Rates | null>(null),
-    [weather, setWeather] = useState<any>(null),
-    [slots, setSlots] = useState<any[]>([]),
+    [weather, setWeather] = useState<PlannerWeather>(undefined),
+    [slots, setSlots] = useState<SlotRow[]>([]),
     [saved, setSaved] = useState<Saved | null>(
       id ? { id, version: 1, key: "" } : null,
     ),
@@ -71,14 +87,16 @@ export function Planner({ initial, id }: { initial?: Plan; id?: string }) {
     [pending, setPending] = useState(false),
     [intent, setIntent] = useState(""),
     [requestId, setRequestId] = useState(""),
-    [requestData, setRequestData] = useState<any>(null),
+    [requestData, setRequestData] = useState<RequestDetail | null>(null),
     [drag, setDrag] = useState<{ day: number; index: number } | null>(null),
     [emailBox, setEmailBox] = useState(false),
     [currency, setCurrency] = useState("KZT");
   const formRef = useRef<HTMLDivElement>(null),
     latest = useRef(plan),
     requestKey = useRef("");
-  latest.current = plan;
+  useEffect(() => {
+    latest.current = plan;
+  }, [plan]);
   useEffect(() => {
     let live = true;
     void api("catalog")
@@ -113,6 +131,7 @@ export function Planner({ initial, id }: { initial?: Plan; id?: string }) {
           "";
       if (key) {
         localStorage.setItem(`almaty-key-${id}`, key);
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs browser-only state (URL, storage, clock) or an async fetch result after hydration
         setCanEdit(true);
         history.replaceState(
           null,
@@ -151,7 +170,9 @@ export function Planner({ initial, id }: { initial?: Plan; id?: string }) {
             }
           }
         }
-      } catch {}
+      } catch {
+        localStorage.removeItem("almaty-draft"); // Corrupt drafts are discarded.
+      }
       setReady(true);
     }
     return () => {
@@ -165,6 +186,7 @@ export function Planner({ initial, id }: { initial?: Plan; id?: string }) {
       guide = params.get("guide"),
       add = params.get("add");
     const item = items.find((i) => i.id === add);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs browser-only state (URL, storage, clock) or an async fetch result after hydration
     if (guide) setPlan((p) => ({ ...p, preferredGuideId: guide }));
     if (item) {
       setPlan((p) => ({
@@ -216,6 +238,7 @@ export function Planner({ initial, id }: { initial?: Plan; id?: string }) {
       }
   }, [requestId, saved]);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs browser-only state (URL, storage, clock) or an async fetch result after hydration
     void loadRequest();
   }, [loadRequest]);
   const quote = useMemo(
@@ -289,6 +312,7 @@ export function Planner({ initial, id }: { initial?: Plan; id?: string }) {
     if (addId) {
       const item = items.find((i) => i.id === addId);
       if (item) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs browser-only state (URL, storage, clock) or an async fetch result after hydration
         add(item);
         setWizard(false);
       }
@@ -1227,7 +1251,7 @@ export function Planner({ initial, id }: { initial?: Plan; id?: string }) {
                     onClick={() =>
                       void requestAction({
                         action: "approve",
-                        quoteId: requestData.quote.id,
+                        quoteId: requestData.quote?.id,
                         viewedVersion: saved?.version,
                       })
                     }
@@ -1272,7 +1296,7 @@ export function Planner({ initial, id }: { initial?: Plan; id?: string }) {
             </div>
           )}
           <div className="hub-messages">
-            {requestData.messages.map((m: any) => (
+            {requestData.messages.map((m) => (
               <article key={m.id}>
                 <small>
                   {m.actor === "client" ? "You" : "Almaty team"} ·{" "}

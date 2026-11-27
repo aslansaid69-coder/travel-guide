@@ -1,3 +1,4 @@
+import { roleFromDatabase } from "@/lib/auth/roles";
 import { getAuth } from "@/lib/auth/server";
 import { ownerSession } from "@/lib/auth/owner";
 import { database } from "@/lib/db";
@@ -25,17 +26,17 @@ export async function staffSession(): Promise<Staff | null> {
   if (!user) return null;
   const rows =
     await database()`SELECT s.role,p.restaurant_ids,p.languages FROM staff_roles s LEFT JOIN hub_staff_profiles p ON p.user_id=s.user_id WHERE s.user_id=${user.id}`;
-  if (!rows.length || !["manager", "partner", "guide"].includes(rows[0].role))
-    return null;
+  const role = roleFromDatabase(rows[0]?.role);
+  if (role !== "admin" && role !== "partner" && role !== "guide") return null;
   return {
     ...user,
-    role: rows[0].role,
+    role,
     restaurantIds: rows[0].restaurant_ids || [],
     languages: rows[0].languages || ["en"],
   };
 }
 export async function requireStaff(
-  roles: Staff["role"][] = ["owner", "manager"],
+  roles: Staff["role"][] = ["owner", "admin"],
 ) {
   const staff = await staffSession();
   if (!staff)
@@ -47,7 +48,7 @@ export async function requireStaff(
 export function partnerCan(staff: Staff, id: string) {
   return (
     staff.role === "owner" ||
-    staff.role === "manager" ||
+    staff.role === "admin" ||
     staff.restaurantIds.includes(id)
   );
 }

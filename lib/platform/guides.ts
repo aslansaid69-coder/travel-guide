@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { database } from "@/lib/db";
-import { clientSession, requireStaff } from "@/lib/hub/access";
+import { clientSession } from "@/lib/hub/access";
 import { HttpError, token, hash } from "@/lib/hub/security";
-import { audit, notify, getPlan } from "@/lib/hub/store";
+import { audit, notify } from "@/lib/hub/store";
 import { siteUrl } from "@/lib/site";
 import { guideSchema, type Guide } from "./types";
 import { commerceSettings, ownedGuide, notifyBooking } from "./store";
@@ -35,7 +35,7 @@ export function matchScore(
 ) {
   return (
     (g.id === preferred ? 1000 : 0) +
-    (g.languages.includes(language as any) ? 100 : 0) +
+    ((g.languages as readonly string[]).includes(language) ? 100 : 0) +
     g.specialties.filter((s) => interests.includes(s)).length * 15 +
     (rating || 0) * 4 -
     Math.min(g.rateMinor / 100000, 20)
@@ -122,7 +122,12 @@ export async function candidates(requestId: string) {
           r.plan.preferredGuideId,
         ),
         feeMinor: Math.ceil(
-          g.rateMinor * (g.rateType === "hour" ? w.hours : 1),
+          g.rateMinor *
+            (g.rateType === "hour"
+              ? w.hours
+              : g.rateType === "day"
+                ? Math.max(1, (r.plan as Plan).days.filter((d) => d.stops.length).length)
+                : 1),
         ),
         rating: row.rating ? Number(row.rating) : null,
         ...w,
