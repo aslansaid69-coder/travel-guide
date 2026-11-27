@@ -14,9 +14,13 @@
     "test:updates:integration": "node --env-file=.env.stage2-test --import tsx scripts/test-updates-integration.ts",
     "test:hub:integration": "node --env-file=.env.stage2-test --import tsx scripts/test-hub-integration.ts",
     "test:platform:integration": "node --env-file=.env.platform-test --import tsx scripts/test-platform-integration.ts",
-    "test:platform:http": "node --env-file=.env.platform-test --import tsx scripts/test-platform-http.ts"
+    "test:platform:http": "node --env-file=.env.platform-test --import tsx scripts/test-platform-http.ts",
+    "lint": "eslint .",
+    "db:migrate:status": "node --env-file=.env.local --import tsx scripts/migrate.ts --dry-run",
+    "db:migrate:prod": "node --import tsx scripts/migrate.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.14.0",
     "@fontsource/dm-serif-display": "^5.2.5",
     "@fontsource/inter": "^5.2.5",
     "@neon/auth": "^0.8.2",
@@ -33,21 +37,27 @@
     "pdf-lib": "^1.17.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",
+    "server-only": "^0.0.1",
     "sharp": "0.35.5",
     "stripe": "^23.1.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@next/eslint-plugin-next": "^16.4.6",
     "@tailwindcss/postcss": "4.3.5",
     "@types/leaflet": "^1.9.22",
     "@types/leaflet.markercluster": "^1.5.6",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "eslint": "^10.15.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "prettier": "^3.10.1",
     "tailwindcss": "4.3.5",
     "tsx": "^4.20.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.74.0"
   },
   "engines": {
     "node": "22.x"

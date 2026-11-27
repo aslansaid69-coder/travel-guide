@@ -1,16 +1,17 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Plus, ArrowUpRight, Check, RefreshCw } from "lucide-react";
+import { ArrowUpRight, RefreshCw } from "lucide-react";
 import {
   itemSchema,
   type CatalogItem,
   type Plan,
-  defaultSettings,
   stages,
   type HubSettings,
+  type MenuItem,
 } from "@/lib/hub/types";
 import { money, dayDate, conflicts } from "@/lib/hub/core";
 import { api } from "./shared";
+import type { AdminAction, HubAdminData, RequestRow } from "./admin-types";
 const categories = [
   "mountains",
   "viewpoint",
@@ -25,20 +26,21 @@ const categories = [
   "rental",
   "beach",
 ];
+const read = (o: object, key: string) => (o as Record<string, unknown>)[key];
 const parse = (f: FormData, key: string) => String(f.get(key) || "");
 export function HubAdmin() {
-  const [data, setData] = useState<any>(null),
+  const [data, setData] = useState<HubAdminData | null>(null),
     [tab, setTab] = useState("requests"),
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
     [selected, setSelected] = useState<string | null>(null),
-    [edit, setEdit] = useState<CatalogItem | null>(null);
-  async function load() {
-    try {
-      setData(await api("admin"));
-    } catch (e) {
-      setMessage((e as Error).message);
-    }
+    [edit, setEdit] = useState<CatalogItem | null>(null),
+    [eventId] = useState(() => `event-${Date.now()}`);
+  function load() {
+    return api("admin").then(
+      (value: HubAdminData) => setData(value),
+      (e: Error) => setMessage(e.message),
+    );
   }
   useEffect(() => {
     void load();
@@ -119,9 +121,9 @@ export function HubAdmin() {
           >
             {name[0].toUpperCase() + name.slice(1)}
             {name === "requests" &&
-              ` (${data.requests?.filter((r: any) => r.status === "new").length || 0})`}
+              ` (${data.requests?.filter((r) => r.status === "new").length || 0})`}
             {name === "catalog" &&
-              ` (${data.items.filter((i: any) => i.status === "pending").length})`}
+              ` (${data.items.filter((i) => i.status === "pending").length})`}
           </button>
         ))}
       </nav>
@@ -222,12 +224,12 @@ export function HubAdmin() {
               ))}
             </div>
           )}
-          {owner && data.candidates?.length > 0 && (
+          {owner && data.candidates && data.candidates.length > 0 && (
             <details className="hub-panel">
               <summary>
                 External feed candidates ({data.candidates.length})
               </summary>
-              {data.candidates.map((c: any) => (
+              {data.candidates.map((c) => (
                 <article key={c.id} className="hub-candidate">
                   <h3>{c.data.title || c.data.name || c.external_id}</h3>
                   <p>
@@ -298,7 +300,7 @@ export function HubAdmin() {
             )}
             submit={action}
           />
-          {data.menuDrafts?.map((d: any) => (
+          {data.menuDrafts?.map((d) => (
             <article className="hub-panel" key={d.id}>
               <p className="eyebrow">{d.status} MENU</p>
               <h3>
@@ -306,7 +308,7 @@ export function HubAdmin() {
                   ?.name || d.item_id}
               </h3>
               <ul className="hub-menu-list">
-                {d.data.items.map((m: any) => (
+                {d.data.items.map((m) => (
                   <li key={m.id}>
                     <strong>{m.name}</strong>
                     <span>{money(m.price, d.data.currency)}</span>
@@ -409,11 +411,9 @@ export function HubAdmin() {
                 </tr>
               </thead>
               <tbody>
-                {data.slots.map((s: any) => (
+                {data.slots.map((s) => (
                   <tr key={s.id}>
-                    <td>
-                      {data.items.find((i: any) => i.id === s.item_id)?.name}
-                    </td>
+                    <td>{data.items.find((i) => i.id === s.item_id)?.name}</td>
                     <td>
                       {new Date(s.starts_at).toLocaleString("en-GB", {
                         timeZone: "Asia/Almaty",
@@ -444,7 +444,7 @@ export function HubAdmin() {
           <JsonForm
             title="Publish an event"
             initial={{
-              id: `event-${Date.now()}`,
+              id: eventId,
               title: "",
               startDate: new Date().toISOString().slice(0, 10),
               place: "",
@@ -458,8 +458,8 @@ export function HubAdmin() {
             onSave={(event) => action({ action: "event", event })}
           />
           {data.candidates
-            ?.filter((c: any) => c.kind === "events")
-            .map((c: any) => (
+            ?.filter((c) => c.kind === "events")
+            .map((c) => (
               <article className="hub-panel" key={c.id}>
                 <h3>{c.data.title}</h3>
                 <p>
@@ -495,7 +495,7 @@ export function HubAdmin() {
           <div className="hub-admin-catalog">
             <section className="hub-panel">
               <h3>Integration readiness</h3>
-              {Object.entries(data.configured).map(([name, on]) => (
+              {Object.entries(data.configured || {}).map(([name, on]) => (
                 <p key={name}>
                   {name}:{" "}
                   <strong>{on ? "Configured" : "Needs credentials"}</strong>
@@ -534,7 +534,7 @@ export function HubAdmin() {
                 <label>
                   Role
                   <select name="role">
-                    <option value="manager">Manager</option>
+                    <option value="admin">Admin</option>
                     <option value="partner">Restaurant partner</option>
                   </select>
                 </label>
@@ -548,7 +548,7 @@ export function HubAdmin() {
                 </label>
                 <button>Save role</button>
               </form>
-              {data.staffRows.map((s: any) => (
+              {data.staffRows.map((s) => (
                 <p key={s.user_id}>
                   {s.email} · {s.role}
                 </p>
@@ -561,7 +561,7 @@ export function HubAdmin() {
           />
           <details className="hub-panel">
             <summary>Audit history</summary>
-            {data.audit.map((a: any, k: number) => (
+            {data.audit?.map((a, k) => (
               <p key={k}>
                 {new Date(a.created_at).toLocaleString()} · {a.action} ·{" "}
                 {a.resource}
@@ -580,8 +580,8 @@ function Requests({
   setSelected,
   busy,
 }: {
-  data: any;
-  action: (b: any) => Promise<any>;
+  data: HubAdminData;
+  action: AdminAction;
   selected: string | null;
   setSelected: (v: string | null) => void;
   busy: boolean;
@@ -594,7 +594,7 @@ function Requests({
     [guests, setGuests] = useState(0),
     [minValue, setMinValue] = useState(0);
   const rows = data.requests.filter(
-    (r: any) =>
+    (r) =>
       (status === "all" || r.status === status) &&
       (!from || r.plan.startDate >= from) &&
       (!to || r.plan.startDate <= to) &&
@@ -605,7 +605,7 @@ function Requests({
         .toLowerCase()
         .includes(search.toLowerCase()),
   );
-  const current = data.requests.find((r: any) => r.id === selected);
+  const current = data.requests.find((r) => r.id === selected);
   if (current)
     return (
       <RequestDetail
@@ -639,7 +639,7 @@ function Requests({
                 "Quote minor",
                 "Currency",
               ],
-              ...rows.map((r: any) => [
+              ...rows.map((r) => [
                 r.id,
                 r.guest.name,
                 r.guest.email,
@@ -703,8 +703,8 @@ function Requests({
           <select value={manager} onChange={(e) => setManager(e.target.value)}>
             <option value="all">All</option>
             {data.staffRows
-              .filter((s: any) => s.role !== "partner")
-              .map((s: any) => (
+              .filter((s) => s.role !== "partner")
+              .map((s) => (
                 <option key={s.user_id} value={s.user_id}>
                   {s.email}
                 </option>
@@ -735,11 +735,11 @@ function Requests({
           <section key={stage}>
             <h3>
               {stage.replace("-", " ")}{" "}
-              <span>{rows.filter((r: any) => r.status === stage).length}</span>
+              <span>{rows.filter((r) => r.status === stage).length}</span>
             </h3>
             {rows
-              .filter((r: any) => r.status === stage)
-              .map((r: any) => (
+              .filter((r) => r.status === stage)
+              .map((r) => (
                 <button
                   key={r.id}
                   className="hub-request-card"
@@ -755,7 +755,10 @@ function Requests({
                   </span>
                   <b>
                     {r.quote_amount
-                      ? money(Number(r.quote_amount), r.quote_currency)
+                      ? money(
+                          Number(r.quote_amount),
+                          r.quote_currency || undefined,
+                        )
                       : "Quote needed"}
                   </b>
                   {r.status === "new" &&
@@ -777,9 +780,9 @@ function RequestDetail({
   close,
   busy,
 }: {
-  request: any;
-  data: any;
-  action: (b: any) => Promise<any>;
+  request: RequestRow;
+  data: HubAdminData;
+  action: AdminAction;
   close: () => void;
   busy: boolean;
 }) {
@@ -787,9 +790,7 @@ function RequestDetail({
     [reply, setReply] = useState(""),
     [visibility, setVisibility] = useState("client"),
     [day, setDay] = useState(0);
-  const messages = data.messages
-    .filter((m: any) => m.request_id === r.id)
-    .reverse();
+  const messages = data.messages.filter((m) => m.request_id === r.id).reverse();
   const checks = conflicts(plan, data.items, data.weather);
   if (!r.guest.phone)
     checks.push({
@@ -877,8 +878,8 @@ function RequestDetail({
                 <select name="manager" defaultValue={r.assigned_to || ""}>
                   <option value="">Unassigned</option>
                   {data.staffRows
-                    .filter((s: any) => s.role !== "partner")
-                    .map((s: any) => (
+                    .filter((s) => s.role !== "partner")
+                    .map((s) => (
                       <option key={s.user_id} value={s.user_id}>
                         {s.email}
                       </option>
@@ -894,7 +895,7 @@ function RequestDetail({
           </form>
           <h3>Conversation & internal notes</h3>
           <div className="hub-messages">
-            {messages.map((m: any) => (
+            {messages.map((m) => (
               <article
                 key={m.id}
                 className={m.visibility === "internal" ? "hub-note" : ""}
@@ -1270,7 +1271,7 @@ function CatalogEditor({
             {label}
             <input
               name={key}
-              defaultValue={String((item as any)[key] || "")}
+              defaultValue={String(read(item, key) || "")}
               required={key === "name"}
               maxLength={800}
             />
@@ -1306,7 +1307,7 @@ function CatalogEditor({
               name={key}
               type="number"
               step={key === "lat" || key === "lng" ? "any" : "1"}
-              defaultValue={(item as any)[key]}
+              defaultValue={Number(read(item, key) ?? 0)}
             />
           </label>
         ))}
@@ -1339,7 +1340,7 @@ function CatalogEditor({
             <input
               type="checkbox"
               name={key}
-              defaultChecked={(item as any)[key]}
+              defaultChecked={Boolean(read(item, key))}
             />
             {label}
           </label>
@@ -1483,10 +1484,10 @@ function MenuEditor({
   submit,
 }: {
   items: CatalogItem[];
-  submit: (b: any) => Promise<any>;
+  submit: AdminAction;
 }) {
   const [itemId, setItemId] = useState(items[0]?.id || ""),
-    [menu, setMenu] = useState<any[]>(items[0]?.menu || []),
+    [menu, setMenu] = useState<MenuItem[]>(items[0]?.menu || []),
     [currency, setCurrency] = useState("KZT"),
     [text, setText] = useState(""),
     [message, setMessage] = useState("");
@@ -1640,29 +1641,31 @@ function MenuEditor({
             />
           </label>
           <div className="hub-inline-actions">
-            {["vegetarian", "vegan", "halal", "gluten-free"].map((tag) => (
-              <label className="hub-checkbox" key={tag}>
-                <input
-                  type="checkbox"
-                  checked={m.tags.includes(tag)}
-                  onChange={() =>
-                    setMenu(
-                      menu.map((v, j) =>
-                        j === k
-                          ? {
-                              ...v,
-                              tags: v.tags.includes(tag)
-                                ? v.tags.filter((t: string) => t !== tag)
-                                : [...v.tags, tag],
-                            }
-                          : v,
-                      ),
-                    )
-                  }
-                />
-                {tag}
-              </label>
-            ))}
+            {(["vegetarian", "vegan", "halal", "gluten-free"] as const).map(
+              (tag) => (
+                <label className="hub-checkbox" key={tag}>
+                  <input
+                    type="checkbox"
+                    checked={m.tags.includes(tag)}
+                    onChange={() =>
+                      setMenu(
+                        menu.map((v, j) =>
+                          j === k
+                            ? {
+                                ...v,
+                                tags: v.tags.includes(tag)
+                                  ? v.tags.filter((t) => t !== tag)
+                                  : [...v.tags, tag],
+                              }
+                            : v,
+                        ),
+                      )
+                    }
+                  />
+                  {tag}
+                </label>
+              ),
+            )}
             <button onClick={() => setMenu(menu.filter((_, j) => j !== k))}>
               Remove
             </button>
@@ -1707,7 +1710,7 @@ function SettingsEditor({
   save,
 }: {
   initial: HubSettings;
-  save: (s: HubSettings) => Promise<any>;
+  save: (s: HubSettings) => Promise<unknown>;
 }) {
   const [error, setError] = useState("");
   return (
@@ -1728,7 +1731,7 @@ function SettingsEditor({
             "depositPercent",
             "dailyHour",
           ] as const)
-            (next as any)[key] = Number(f.get(key));
+            next[key] = Number(f.get(key));
           for (const key of [
             "payOnArrival",
             "autoPublish",
@@ -1774,7 +1777,7 @@ function SettingsEditor({
             <input
               name={key}
               type="number"
-              defaultValue={(initial as any)[key]}
+              defaultValue={Number(read(initial, key) ?? 0)}
             />
           </label>
         ))}
@@ -1787,7 +1790,7 @@ function SettingsEditor({
         ].map(([key, label]) => (
           <label key={key}>
             {label}
-            <input name={key} defaultValue={(initial as any)[key]} />
+            <input name={key} defaultValue={String(read(initial, key) ?? "")} />
           </label>
         ))}
         <label>
@@ -1814,7 +1817,7 @@ function SettingsEditor({
             <input
               type="checkbox"
               name={key}
-              defaultChecked={(initial as any)[key]}
+              defaultChecked={Boolean(read(initial, key))}
             />
             {label}
           </label>
@@ -1843,8 +1846,8 @@ function JsonForm({
   onSave,
 }: {
   title: string;
-  initial: any;
-  onSave: (v: any) => Promise<any>;
+  initial: Record<string, unknown>;
+  onSave: (v: Record<string, unknown>) => Promise<unknown>;
 }) {
   const [value, setValue] = useState(JSON.stringify(initial, null, 2)),
     [error, setError] = useState("");
@@ -1876,11 +1879,12 @@ function Insights({
   data,
   action,
 }: {
-  data: any;
-  action: (v: any) => Promise<any>;
+  data: HubAdminData;
+  action: AdminAction;
 }) {
-  const a = data.analytics,
-    events = a.events;
+  const a = data.analytics;
+  if (!a) return null;
+  const events = a.events;
   return (
     <>
       <h2>Owner insights</h2>
@@ -1893,13 +1897,13 @@ function Insights({
           <span>Confirmed / completed</span>
           <strong>{a.orders.confirmed}</strong>
         </article>
-        {events.map((e: any) => (
+        {events.map((e) => (
           <article className="hub-panel" key={e.event}>
             <span>{e.event} · consented analytics</span>
             <strong>{e.count}</strong>
           </article>
         ))}
-        {a.currencies.map((c: any) => (
+        {a.currencies.map((c) => (
           <article className="hub-panel" key={c.currency}>
             <span>Revenue · {c.currency}</span>
             <strong>{money(Number(c.revenue), c.currency)}</strong>
@@ -1922,11 +1926,11 @@ function Insights({
           <article className="hub-panel" key={event}>
             <h3>Most {event} places</h3>
             {a.places
-              .filter((p: any) => p.event === event)
+              .filter((p) => p.event === event)
               .slice(0, 10)
-              .map((p: any) => (
+              .map((p) => (
                 <p key={p.item_id}>
-                  {data.items.find((i: any) => i.id === p.item_id)?.name ||
+                  {data.items.find((i) => i.id === p.item_id)?.name ||
                     p.item_id}{" "}
                   <strong>{p.count}</strong>
                 </p>
@@ -1935,7 +1939,7 @@ function Insights({
         ))}
         <article className="hub-panel">
           <h3>Camera uptime · last 7 days</h3>
-          {a.camera.map((c: any) => (
+          {a.camera.map((c) => (
             <p key={c.id}>
               {c.id} ·{" "}
               {c.checks
@@ -1947,7 +1951,7 @@ function Insights({
         </article>
         <article className="hub-panel">
           <h3>API usage · last 30 days</h3>
-          {a.updates.map((u: any) => (
+          {a.updates.map((u) => (
             <p key={u.source_key}>
               {u.source_key} · {u.requests} requests · {u.failures} failures
             </p>
@@ -1958,7 +1962,7 @@ function Insights({
         </article>
         <article className="hub-panel">
           <h3>Notification delivery</h3>
-          {data.notifications.map((n: any) => (
+          {data.notifications?.map((n) => (
             <p key={n.id}>
               {n.subject} · <strong>{n.status}</strong>
               {n.last_error && <small>{n.last_error}</small>}
@@ -1967,7 +1971,7 @@ function Insights({
         </article>
       </div>
       <h3>Post-trip review moderation</h3>
-      {data.reviews.map((r: any) => (
+      {data.reviews?.map((r) => (
         <article key={r.id} className="hub-panel">
           <strong>
             {r.rating}/5 · {r.status}

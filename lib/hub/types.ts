@@ -204,7 +204,7 @@ export type Rates = {
 export type Staff = {
   id: string;
   email: string;
-  role: "owner" | "manager" | "partner" | "guide";
+  role: "owner" | "admin" | "partner" | "guide";
   restaurantIds: string[];
   languages: string[];
 };

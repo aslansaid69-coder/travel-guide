@@ -12,6 +12,7 @@ import {
   Empty,
   downloadPrivate,
 } from "./shared";
+import type { BookingView } from "./view-types";
 export function Checkout({
   id,
   statusOnly = false,
@@ -20,12 +21,13 @@ export function Checkout({
   statusOnly?: boolean;
 }) {
   const access = usePrivate(),
-    s = useResource(`booking/${id}`, access.key, access.ready),
+    s = useResource<BookingView>(`booking/${id}`, access.key, access.ready),
     [currency, setCurrency] = useState("KZT"),
     [promo, setPromo] = useState<string | null>(null),
     [voucher, setVoucher] = useState<string | null>(null),
     [accepted, setAccepted] = useState(false);
-  const d = s.data;
+  const d = s.data,
+    { load } = s;
   useEffect(() => {
     if (!statusOnly || !access.ready) return;
     let attempts = 0;
@@ -34,10 +36,10 @@ export function Checkout({
         clearInterval(timer);
         return;
       }
-      void s.load();
+      void load();
     }, 10000);
     return () => clearInterval(timer);
-  }, [statusOnly, access.ready, s.load]);
+  }, [statusOnly, access.ready, load]);
   const convert = (n: number) => {
     if (!d?.quote) return n;
     const from = d.quote.currency;
@@ -96,14 +98,14 @@ export function Checkout({
                 {d.guide?.name || "To be arranged"}
               </p>
               <ul className="platform-list">
-                {d.plan.days.map((day: any, i: number) => (
+                {d.plan.days.map((day, i) => (
                   <li key={i}>
                     <strong>Day {i + 1}</strong>
                     <p>
                       {day.stops
                         .map(
-                          (stop: any) =>
-                            `${stop.start} ${d.items.find((x: any) => x.id === stop.itemId)?.name || "Unavailable service"}`,
+                          (stop) =>
+                            `${stop.start} ${d.items.find((x) => x.id === stop.itemId)?.name || "Unavailable service"}`,
                         )
                         .join(" → ")}
                     </p>
@@ -117,7 +119,7 @@ export function Checkout({
                 </a>
               </div>
             </section>
-            {d.weather?.advice?.cautions?.length > 0 && (
+            {!!d.weather?.advice?.cautions?.length && (
               <p className="platform-warning">
                 {d.weather.advice.cautions.join(" ")} Ask the team for a
                 suitable indoor alternative.
@@ -131,7 +133,7 @@ export function Checkout({
                   Your manager will confirm each addition and send a new quote.
                 </p>
                 {d.upsells.length ? (
-                  d.upsells.map((item: any) => (
+                  d.upsells.map((item) => (
                     <div className="platform-line" key={item.id}>
                       <span>
                         {item.name}
@@ -300,7 +302,10 @@ export function Checkout({
                         primary
                         busy={s.busy}
                         onClick={() =>
-                          void s.run({ action: "approve", quoteId: d.quote.id })
+                          void s.run({
+                            action: "approve",
+                            quoteId: d.quote?.id,
+                          })
                         }
                       >
                         Approve final quote
@@ -389,7 +394,7 @@ export function Checkout({
                 <div className="platform-detail">
                   <h3>Payment history</h3>
                   {d.payments.length ? (
-                    d.payments.map((p: any) => (
+                    d.payments.map((p) => (
                       <p key={p.id}>
                         <Money amount={p.amount_minor} currency={p.currency} />{" "}
                         · {p.status}
@@ -421,7 +426,11 @@ export function Checkout({
                             <>
                               {" · "}
                               <a
-                                href={p.invoice_url || p.invoice_hosted_url}
+                                href={
+                                  p.invoice_url ||
+                                  p.invoice_hosted_url ||
+                                  undefined
+                                }
                                 target="_blank"
                                 rel="noreferrer"
                               >
@@ -439,7 +448,7 @@ export function Checkout({
                       No card payment has been recorded.
                     </p>
                   )}
-                  {d.documents.map((doc: any) => (
+                  {d.documents.map((doc) => (
                     <p key={doc.id}>
                       <Button
                         onClick={() =>

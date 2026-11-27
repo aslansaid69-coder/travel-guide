@@ -10,14 +10,15 @@ import {
   Money,
   platform,
 } from "./shared";
+import type { GuidesPublicView, GuideWorkspaceView } from "./view-types";
 export function GuideMarketplace({
   id,
   initial,
 }: {
   id?: string;
-  initial?: any;
+  initial?: GuidesPublicView;
 }) {
-  const s = useResource(
+  const s = useResource<GuidesPublicView>(
     "guides" + (id ? "/" + id : ""),
     undefined,
     true,
@@ -33,7 +34,7 @@ export function GuideMarketplace({
     >
       <Status message={s.message} />
       <div className="platform-grid">
-        {s.data?.guides.map((g: any) => (
+        {s.data?.guides.map((g) => (
           <article className="platform-card" key={g.id}>
             {g.photo ? (
               <img
@@ -83,10 +84,10 @@ export function GuideMarketplace({
           <a href="/plan">Plan your trip ↗</a>
         </Empty>
       )}
-      {id && s.data?.reviews.length > 0 && (
+      {id && s.data && s.data.reviews.length > 0 && (
         <section className="platform-card platform-detail">
           <h2>Travellers’ stories</h2>
-          {s.data.reviews.map((r: any, i: number) => (
+          {s.data.reviews.map((r, i) => (
             <blockquote key={i}>
               <p>
                 {r.rating}/5 · {r.body}
@@ -100,13 +101,14 @@ export function GuideMarketplace({
   );
 }
 export function GuideDashboard() {
-  const s = useResource("guide"),
+  const s = useResource<GuideWorkspaceView>("guide"),
     [invite, setInvite] = useState(""),
     [terms, setTerms] = useState(false);
   useEffect(() => {
     const f = new URLSearchParams(location.hash.slice(1));
     const key =
       f.get("invite") || sessionStorage.getItem("almaty-guide-invite") || "";
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs browser-only state (URL, storage, clock) or an async fetch result after hydration
     setInvite(key);
     if (key) sessionStorage.setItem("almaty-guide-invite", key);
     if (f.has("invite")) history.replaceState(null, "", location.pathname);
@@ -230,7 +232,7 @@ export function GuideDashboard() {
               </form>
               <details className="platform-detail">
                 <summary>Your calendar windows</summary>
-                {s.data.availability.map((w: any) => (
+                {s.data.availability.map((w) => (
                   <p key={w.id}>
                     {w.blocked ? "Blocked" : "Available"} ·{" "}
                     {new Date(w.starts_at).toLocaleString()} —{" "}
@@ -242,7 +244,7 @@ export function GuideDashboard() {
           </div>
           <h2 className="platform-detail">Your tours</h2>
           <div className="platform-grid">
-            {s.data.assignments.map((a: any) => (
+            {s.data.assignments.map((a) => (
               <article className="platform-card" key={a.id}>
                 <span className="platform-badge">{a.status}</span>
                 <h3 className="platform-detail">
@@ -263,7 +265,8 @@ export function GuideDashboard() {
                   Your share:{" "}
                   <Money
                     amount={Math.floor(
-                      (a.fee_minor * (100 - a.commission_percent)) / 100,
+                      (a.fee_minor * (100 - Number(a.commission_percent))) /
+                        100,
                     )}
                     currency={a.currency}
                   />
@@ -354,7 +357,7 @@ export function GuideDashboard() {
           <section className="platform-card platform-detail">
             <h2>Earnings ledger</h2>
             {s.data.transfers.length ? (
-              s.data.transfers.map((t: any) => (
+              s.data.transfers.map((t) => (
                 <p key={t.id}>
                   <Money amount={t.amount_minor} currency={t.currency} /> ·{" "}
                   {t.status}

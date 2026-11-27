@@ -20,7 +20,7 @@ export async function tripData(request: Request, id: string) {
   const assignment = (
     await sql`SELECT a.id,a.status,a.starts_at,a.ends_at,g.data,g.user_id FROM guide_assignments a JOIN guides g ON g.id=a.guide_id WHERE a.request_id=${id} AND a.status IN ('accepted','started','completion_requested','completed') ORDER BY a.created_at DESC LIMIT 1`
   )[0];
-  const visible = a.role === "owner" || a.role === "manager";
+  const visible = a.role === "owner" || a.role === "admin";
   if (a.role === "guide" && !unlocked) {
     r.plan = redactDeep(r.plan);
     r.guest = redactDeep(r.guest);
@@ -52,7 +52,7 @@ export async function tripData(request: Request, id: string) {
       plan: r.plan,
     },
     items: items.filter((i) =>
-      r.plan.days.some((d: any) => d.stops.some((s: any) => s.itemId === i.id)),
+      r.plan.days.some((d) => d.stops.some((s) => s.itemId === i.id)),
     ),
     guide: assignment
       ? {
@@ -108,7 +108,7 @@ export async function postMessage(
       )[0] === undefined
     )
       throw new HttpError(400, "Upload a photo to this booking first.");
-    if (!contactUnlocked(r) && !["owner", "manager"].includes(a.role))
+    if (!contactUnlocked(r) && !["owner", "admin"].includes(a.role))
       throw new HttpError(409, "Photo sharing opens after payment.");
   }
   if (m.kind === "location" && (m.lat === undefined || m.lng === undefined))

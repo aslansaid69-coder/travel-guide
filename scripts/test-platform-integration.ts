@@ -3,7 +3,7 @@ import sharp from "sharp";
 import { randomUUID } from "node:crypto";
 import { writeFile, mkdir } from "node:fs/promises";
 import { database } from "../lib/db";
-import { createPlan, editable } from "../lib/hub/store";
+import { createPlan } from "../lib/hub/store";
 import { planSchema } from "../lib/hub/types";
 import { guideSchema } from "../lib/platform/types";
 import { handlePlatform } from "../lib/platform/api";
@@ -23,6 +23,10 @@ import { releaseEarnings } from "../lib/platform/payouts";
 import { upload, readAsset } from "../lib/platform/trips";
 import { handle as legacyHandle } from "../lib/hub/api";
 import { checkout } from "../lib/hub/bookings";
+/** Typed test double: the expected parameter type is inferred from the call site. */
+function stub<T>(value: unknown): T {
+  return value as T;
+}
 if (process.env.INTEGRATION_BRANCH !== "platform-v2-test-2026-11-19")
   throw new Error("Use the isolated platform test branch only.");
 if (
@@ -207,11 +211,24 @@ try {
     "",
   );
   assert.equal(acceptance.totalMinor, 9000);
-  const created: any[] = [];
+  type CreatedSession = {
+    data: {
+      line_items: { price_data: { unit_amount: number } }[];
+      invoice_creation: {
+        enabled: boolean;
+        invoice_data: { metadata: Record<string, string> };
+      };
+    };
+    options: Record<string, unknown>;
+  };
+  const created: CreatedSession[] = [];
   const mock = {
     checkout: {
       sessions: {
-        create: async (data: any, options: any) => {
+        create: async (
+          data: CreatedSession["data"],
+          options: Record<string, unknown>,
+        ) => {
           created.push({ data, options });
           return {
             id:
@@ -228,12 +245,12 @@ try {
     },
   };
   process.env.STRIPE_INVOICE_ENABLED = "true";
-  const result = await checkout(r3, "deposit", mock as any);
+  const result = await checkout(r3, "deposit", stub(mock));
   delete process.env.STRIPE_INVOICE_ENABLED;
   assert.equal(result.url, "https://checkout.stripe.test/session");
   assert.equal(created[0].data.line_items[0].price_data.unit_amount, 2700);
   assert.equal(created[0].data.invoice_creation.enabled, true);
-  await checkout(r3, "deposit", mock as any);
+  await checkout(r3, "deposit", stub(mock));
   assert.equal(created.length, 1);
   check(
     "hosted checkout charges the server-side discounted deposit and reuses the open session",
@@ -250,11 +267,11 @@ try {
     number: "TEST-001",
   };
   await assert.rejects(
-    recordInvoice({ ...invoice, total: 9999 } as any),
+    recordInvoice(stub({ ...invoice, total: 9999 })),
     /does not match/,
   );
-  await recordInvoice(invoice as any);
-  await recordInvoice(invoice as any);
+  await recordInvoice(stub(invoice));
+  await recordInvoice(stub(invoice));
   assert.equal(
     Number(
       (await sql`SELECT paid_minor FROM hub_requests WHERE id=${r3}`)[0]
@@ -287,8 +304,8 @@ try {
     id: prefix + "-session",
     payment_intent: prefix + "-intent",
   };
-  await paymentEnriched(session as any, service as any);
-  await paymentEnriched(session as any, service as any);
+  await paymentEnriched(stub(session), stub(service));
+  await paymentEnriched(stub(session), stub(service));
   assert.equal(
     (await sql`SELECT payment_status FROM hub_requests WHERE id=${r3}`)[0]
       .payment_status,
@@ -322,18 +339,18 @@ try {
   );
   await sql`UPDATE hub_requests SET status='completed' WHERE id=${r3}`;
   await sql`UPDATE hub_quotes SET expires_at=now()-interval '1 day' WHERE request_id=${r3}`;
-  await checkout(r3, "full", mock as any);
+  await checkout(r3, "full", stub(mock));
   assert.equal(created[1].data.line_items[0].price_data.unit_amount, 6300);
   const balanceStatus = (
     await sql`SELECT hub_apply_payment(${prefix + "-balance-event"},${prefix + "-balance-session"},6300,'kzt') AS status`
   )[0].status;
   assert.equal(balanceStatus, "completed");
   await paymentEnriched(
-    {
+    stub({
       id: prefix + "-balance-session",
       payment_intent: prefix + "-intent",
-    } as any,
-    service as any,
+    }),
+    stub(service),
   );
   assert.equal(
     (await sql`SELECT status FROM hub_requests WHERE id=${r3}`)[0].status,
@@ -353,7 +370,7 @@ try {
     ),
     8300,
   );
-  await paymentEnriched(session as any, service as any);
+  await paymentEnriched(stub(session), stub(service));
   assert.equal(
     (await sql`SELECT payment_status FROM hub_requests WHERE id=${r3}`)[0]
       .payment_status,
@@ -449,7 +466,10 @@ try {
       },
     },
     refunds: {
-      create: async (input: any) => {
+      create: async (input: {
+        amount: number;
+        metadata: { refundId: string };
+      }) => {
         refundCalls++;
         await sql`SELECT platform_apply_refund(${input.metadata.refundId},'re_test_cancel','succeeded',${input.amount})`;
         return { id: "re_test_cancel", status: "succeeded" };
@@ -457,7 +477,7 @@ try {
     },
   };
   await assert.rejects(
-    releaseEarnings(payoutAssignment, "test", payoutMock as any),
+    releaseEarnings(payoutAssignment, "test", stub(payoutMock)),
     /eligibility/,
   );
   process.env.STRIPE_CONNECT_ENABLED = "true";
@@ -465,10 +485,10 @@ try {
   process.env.STRIPE_CONNECT_COUNTRIES = "US";
   await Promise.allSettled(
     [1, 2].map(() =>
-      releaseEarnings(payoutAssignment, "test", payoutMock as any),
+      releaseEarnings(payoutAssignment, "test", stub(payoutMock)),
     ),
   );
-  await releaseEarnings(payoutAssignment, "test", payoutMock as any);
+  await releaseEarnings(payoutAssignment, "test", stub(payoutMock));
   assert.equal(transferCalls, 1);
   assert.equal(
     Number(
@@ -485,7 +505,7 @@ try {
     r2,
     "test",
     "Sandbox policy refund",
-    payoutMock as any,
+    stub(payoutMock),
   );
   assert.equal(cancellation.refundMinor, 10000);
   assert.equal(reversalCalls, 1);
@@ -503,7 +523,7 @@ try {
     0,
   );
   await assert.rejects(
-    cancelRefund(r2, "test", "Repeat", payoutMock as any),
+    cancelRefund(r2, "test", "Repeat", stub(payoutMock)),
     /already cancelled|pending/,
   );
   assert.equal(refundCalls, 1);
@@ -546,8 +566,8 @@ try {
   await sql`SELECT hub_apply_payment(${prefix + "-late-event"},${prefix + "-late-session"},10000,'kzt')`;
   await sql`UPDATE platform_checkout SET promo_code='EXPIRED-CODE' WHERE request_id=${r1}`;
   await paymentEnriched(
-    { id: prefix + "-late-session", payment_intent: prefix + "-intent" } as any,
-    service as any,
+    stub({ id: prefix + "-late-session", payment_intent: prefix + "-intent" }),
+    stub(service),
   );
   assert.equal(
     (await sql`SELECT status FROM hub_requests WHERE id=${r1}`)[0].status,

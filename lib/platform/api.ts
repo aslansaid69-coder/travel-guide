@@ -1,17 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { database } from "@/lib/db";
-import { clientSession, requireStaff } from "@/lib/hub/access";
-import { body, origin, limit, HttpError, hash } from "@/lib/hub/security";
-import {
-  catalog,
-  getPlan,
-  editable,
-  audit,
-  settings,
-  rates,
-  saveCatalog,
-} from "@/lib/hub/store";
+import { requireStaff } from "@/lib/hub/access";
+import { body, origin, limit, HttpError } from "@/lib/hub/security";
+import { catalog, audit, settings, rates, saveCatalog } from "@/lib/hub/store";
 import { getWeather } from "@/lib/weather/read";
 import {
   booking,
@@ -22,13 +14,8 @@ import {
   redactDeep,
   scrubContacts,
 } from "./store";
-import { guideSchema, commerceSchema, codeSchema } from "./types";
-import {
-  research,
-  findPrices,
-  publishResearch,
-  allowedSources,
-} from "./research";
+import { commerceSchema, codeSchema } from "./types";
+import { research, findPrices, publishResearch } from "./research";
 import {
   saveGuide,
   inviteGuide,
@@ -125,8 +112,8 @@ export async function handlePlatform(request: Request, path: string[]) {
         discountMinor: n?.discount || 0,
         voucherMinor: n?.voucher || 0,
         items: items.filter((i) =>
-          r.plan.days.some((d: any) =>
-            d.stops.some((s: any) => s.itemId === i.id),
+          r.plan.days.some((d) =>
+            d.stops.some((s) => s.itemId === i.id),
           ),
         ),
         upsells: items
@@ -137,8 +124,8 @@ export async function handlePlatform(request: Request, path: string[]) {
                 !i.outdoor ||
                 i.category === "transfer") &&
               ["transfer", "rental", "activity"].includes(i.category) &&
-              !r.plan.days.some((d: any) =>
-                d.stops.some((s: any) => s.itemId === i.id),
+              !r.plan.days.some((d) =>
+                d.stops.some((s) => s.itemId === i.id),
               ),
           )
           .slice(0, 4),
@@ -162,9 +149,9 @@ export async function handlePlatform(request: Request, path: string[]) {
         const lines = [
           `Saved ${new Date().toISOString()}`,
           `${data.request.guest.name}: ${data.request.plan.adults + data.request.plan.children} guests`,
-          ...data.request.plan.days.flatMap((d: any, i: number) => [
+          ...data.request.plan.days.flatMap((d, i) => [
             `Day ${i + 1}: ${new Date(new Date(data.request.plan.startDate + "T12:00:00+05:00").valueOf() + i * 86400000).toISOString().slice(0, 10)}`,
-            ...d.stops.flatMap((s: any) => {
+            ...d.stops.flatMap((s) => {
               const item = data.items.find((i) => i.id === s.itemId);
               return [
                 `${s.start} - ${item?.name || s.itemId} (${s.duration} min)`,
@@ -255,7 +242,7 @@ export async function handlePlatform(request: Request, path: string[]) {
     }
     if (resource === "admin") {
       const staff = await requireStaff(
-        id === "guides" ? ["owner", "manager"] : ["owner"],
+        id === "guides" ? ["owner", "admin"] : ["owner"],
       );
       if (id === "research")
         return json({
@@ -344,7 +331,7 @@ export async function handlePlatform(request: Request, path: string[]) {
   if (resource === "booking" && id) {
     const a = await booking(request, id, { guide: false });
     if (b.action === "payment-link") {
-      if (!["owner", "manager"].includes(a.role))
+      if (!["owner", "admin"].includes(a.role))
         throw new HttpError(403, "Travel desk access required.");
       return json(await sendPaymentLink(id, a.actor));
     }
@@ -519,7 +506,7 @@ export async function handlePlatform(request: Request, path: string[]) {
   }
   if (resource === "admin") {
     const staff = await requireStaff(
-      id === "guides" ? ["owner", "manager"] : ["owner"],
+      id === "guides" ? ["owner", "admin"] : ["owner"],
     );
     if (id === "research") {
       if (b.action === "search")

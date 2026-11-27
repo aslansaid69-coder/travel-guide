@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Snapshot } from "@/lib/updates/types";
 type Dashboard = {
@@ -37,6 +38,7 @@ export function UpdateAdmin() {
     setData(await r.json());
   }
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs browser-only state (URL, storage, clock) or an async fetch result after hydration
     void load().catch((e) => setMessage(e.message));
   }, []);
   async function run() {
@@ -68,7 +70,7 @@ export function UpdateAdmin() {
           {busy ? "Updating…" : "Run update now"}
         </button>
         <a href="/admin/cameras">Cameras</a>
-        <a href="/">Open guide</a>
+        <Link href="/">Open guide</Link>
       </div>
       <p role="status">{message}</p>
       {data && (

@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import type { Camera } from "@/lib/cameras/types";
 import { createAuthClient } from "@neon/auth/next";
@@ -25,6 +26,7 @@ export function CameraAdmin() {
     setJobs(data.jobs);
   }
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs browser-only state (URL, storage, clock) or an async fetch result after hydration
     void reload().catch((e) => setMessage(e.message));
   }, []);
   async function action(payload: unknown) {
@@ -72,7 +74,7 @@ export function CameraAdmin() {
           Run camera check
         </button>
         <a href="/admin/updates">Automatic updates</a>
-        <a href="/">Open guide</a>
+        <Link href="/">Open guide</Link>
         <button
           onClick={async () => {
             await createAuthClient().signOut();

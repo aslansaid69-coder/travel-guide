@@ -7,6 +7,7 @@ export function PrivacyControls() {
     [message, setMessage] = useState("");
   useEffect(() => {
     const q = new URLSearchParams(location.search);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs browser-only state (URL, storage, clock) or an async fetch result after hydration
     setSubscriber(q.get("subscriber") || "");
     setToken(q.get("token") || "");
   }, []);

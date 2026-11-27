@@ -6,6 +6,13 @@ import { maps, km, centre, openNow, money, mealPrice } from "@/lib/hub/core";
 import { TravelMap } from "./map";
 import { useT, useLanguage } from "./language";
 import { api } from "./shared";
+
+type EvidenceRecord = {
+  evidence?: { url?: string; source?: string; licence?: string; checkedAt?: string };
+};
+const evidenceOf = (item: CatalogItem, key: string) =>
+  item.researchEvidence?.[key] as EvidenceRecord | undefined;
+
 const categories = [
   "all",
   "mountains",
@@ -138,19 +145,19 @@ export function CatalogCard({
           {item.verifiedAt && ` · ${item.verifiedAt.slice(0, 10)}`}
         </p>
         {lang === "ru" &&
-          (item.researchEvidence?.descriptionRu as any)?.evidence?.url && (
+          evidenceOf(item, "descriptionRu")?.evidence?.url && (
             <p className="hub-caption">
               <a
                 href={
-                  (item.researchEvidence?.descriptionRu as any).evidence.url
+                  evidenceOf(item, "descriptionRu")?.evidence?.url
                 }
                 target="_blank"
                 rel="noreferrer"
               >
                 Источник русского текста ·{" "}
-                {(item.researchEvidence?.descriptionRu as any).evidence.source}{" "}
+                {evidenceOf(item, "descriptionRu")?.evidence?.source}{" "}
                 ·{" "}
-                {(item.researchEvidence?.descriptionRu as any).evidence.licence}
+                {evidenceOf(item, "descriptionRu")?.evidence?.licence}
               </a>
             </p>
           )}
@@ -174,17 +181,17 @@ export function CatalogCard({
             </a>
           </p>
         )}
-        {(item.researchEvidence?.price as any)?.evidence?.url && (
+        {evidenceOf(item, "price")?.evidence?.url && (
           <p className="hub-caption">
             <a
-              href={(item.researchEvidence?.price as any).evidence.url}
+              href={evidenceOf(item, "price")?.evidence?.url}
               target="_blank"
               rel="noreferrer"
             >
               Price source ↗
             </a>{" "}
             · checked{" "}
-            {(item.researchEvidence?.price as any).evidence.checkedAt?.slice(
+            {evidenceOf(item, "price")?.evidence?.checkedAt?.slice(
               0,
               10,
             )}

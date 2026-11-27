@@ -12,10 +12,13 @@ import {
   Money,
   platform,
 } from "./shared";
+import type { DealsView, LoyaltyView } from "./view-types";
+import type { assistant } from "@/lib/platform/assistant";
+type AssistantReply = Awaited<ReturnType<typeof assistant>>;
 export function TravelAssistant() {
   const [open, setOpen] = useState(false),
     [question, setQuestion] = useState(""),
-    [reply, setReply] = useState<any>(null),
+    [reply, setReply] = useState<AssistantReply | null>(null),
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
     [ai, setAI] = useState(false);
@@ -71,7 +74,7 @@ export function TravelAssistant() {
               setMessage("");
               try {
                 setReply(
-                  await platform("assistant", {
+                  await platform<AssistantReply>("assistant", {
                     question,
                     language: lang,
                     useAI: ai,
@@ -117,7 +120,7 @@ export function TravelAssistant() {
           {reply && (
             <div aria-live="polite">
               <p>{reply.answer}</p>
-              {reply.items.map((i: any) => (
+              {reply.items.map((i) => (
                 <div className="platform-evidence" key={i.id}>
                   <strong>{i.name}</strong>
                   <p className="platform-muted">
@@ -149,7 +152,8 @@ export function TravelAssistant() {
   );
 }
 export function Deals() {
-  const s = useResource("deals");
+  const s = useResource<DealsView>("deals"),
+    { setMessage } = s;
   useEffect(() => {
     const f = new URLSearchParams(location.hash.slice(1)),
       value = f.get("confirm") || f.get("unsubscribe");
@@ -161,17 +165,17 @@ export function Deals() {
         key,
       })
         .then(() =>
-          s.setMessage(
+          setMessage(
             f.has("unsubscribe")
               ? "Unsubscribed from this service."
               : "Availability subscription confirmed.",
           ),
         )
-        .catch((e) => s.setMessage(e.message));
+        .catch((e) => setMessage(e.message));
       sessionStorage.setItem("almaty-waitlist", value);
       history.replaceState(null, "", location.pathname);
     }
-  }, []);
+  }, [setMessage]);
   return (
     <Shell
       title="Leave room for a little spontaneity."
@@ -180,7 +184,7 @@ export function Deals() {
     >
       <Status message={s.message} busy={s.busy} />
       <div className="platform-grid">
-        {s.data?.deals.map((d: any) => (
+        {s.data?.deals.map((d) => (
           <article className="platform-card" key={d.id}>
             {d.image && (
               <img
@@ -243,7 +247,7 @@ export function Deals() {
               </Field>
               <Field label="Experience">
                 <select name="item">
-                  {s.data.services.map((i: any) => (
+                  {s.data.services.map((i) => (
                     <option key={i.id} value={i.id}>
                       {i.name}
                     </option>
@@ -298,7 +302,7 @@ export function Deals() {
   );
 }
 export function Loyalty() {
-  const s = useResource("loyalty");
+  const s = useResource<LoyaltyView>("loyalty");
   return (
     <section className="platform-card platform-detail">
       <h2>Good journeys come around.</h2>
@@ -317,7 +321,7 @@ export function Loyalty() {
             {s.data.account.points} loyalty points · reward credits below are
             used as vouchers, not cash.
           </p>
-          {s.data.codes.map((c: any) => (
+          {s.data.codes.map((c) => (
             <p key={c.code}>
               <strong>{c.code}</strong> ·{" "}
               {c.data.kind === "promo" ? (

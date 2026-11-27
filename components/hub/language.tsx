@@ -180,6 +180,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       saved === "ru" || (!saved && navigator.language.startsWith("ru"))
         ? "ru"
         : "en";
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs browser-only state (URL, storage, clock) or an async fetch result after hydration
     set(value);
     document.documentElement.lang = value;
   }, []);

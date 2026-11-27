@@ -1,4 +1,5 @@
 import { GuideMarketplace } from "@/components/platform/guides";
+import type { GuidesPublicView } from "@/components/platform/view-types";
 import { guidesPublic } from "@/lib/platform/store";
 import { database } from "@/lib/db";
 import { notFound } from "next/navigation";
@@ -41,10 +42,16 @@ export default async function Page({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(schema).replaceAll("<", String.fromCharCode(92)+"u003c"),
+          __html: JSON.stringify(schema).replaceAll(
+            "<",
+            String.fromCharCode(92) + "u003c",
+          ),
         }}
       />
-      <GuideMarketplace id={id} initial={{ guides, reviews }} />
+      <GuideMarketplace
+        id={id}
+        initial={{ guides, reviews: reviews as GuidesPublicView["reviews"] }}
+      />
     </>
   );
 }

@@ -52,7 +52,8 @@ export function WeatherPanel() {
   const t = useT();
   const { lang } = useLanguage();
   const [view, setView] = useState<WeatherView | null>(null),
-    [loaded, setLoaded] = useState(false);
+    [loaded, setLoaded] = useState(false),
+    [nowSeconds] = useState(() => Date.now() / 1000);
   useEffect(() => {
     let disposed = false;
     async function refresh() {
@@ -79,7 +80,7 @@ export function WeatherPanel() {
   }, []);
   const weather = view?.weather,
     advice = view?.advice;
-  const today = localDay(Date.now() / 1000),
+  const today = localDay(nowSeconds),
     days = weather?.daily.filter((d) => d.date >= today) || [],
     day = days.find((d) => d.date === today);
   return (

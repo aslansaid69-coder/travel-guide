@@ -9,18 +9,25 @@ import {
   Empty,
   platform,
 } from "./shared";
+import type {
+  GoogleLiveResult,
+  ResearchDraftRow,
+  ResearchResult,
+  ResearchView,
+} from "./view-types";
+import type { ResearchDraft } from "@/lib/platform/types";
 export function ResearchDesk() {
-  const s = useResource("admin/research"),
+  const s = useResource<ResearchView>("admin/research"),
     [query, setQuery] = useState(""),
     [bulk, setBulk] = useState(false),
     [category, setCategory] = useState("activity"),
-    [selected, setSelected] = useState<any>(null),
+    [selected, setSelected] = useState<ResearchDraftRow | null>(null),
     [edit, setEdit] = useState(""),
-    [result, setResult] = useState<any>(null),
+    [result, setResult] = useState<ResearchResult | null>(null),
     [priceURL, setPriceURL] = useState(""),
     [confirmPrice, setConfirmPrice] = useState(false),
-    [google, setGoogle] = useState<any>(null);
-  const select = (row: any) => {
+    [google, setGoogle] = useState<GoogleLiveResult | null>(null);
+  const select = (row: ResearchDraftRow) => {
     setSelected(row);
     setEdit(
       JSON.stringify(
@@ -50,7 +57,12 @@ export function ResearchDesk() {
             onSubmit={async (e) => {
               e.preventDefault();
               setResult(
-                await s.run({ action: "search", query, bulk, category }),
+                (await s.run({
+                  action: "search",
+                  query,
+                  bulk,
+                  category,
+                })) as ResearchResult | null,
               );
             }}
           >
@@ -100,7 +112,7 @@ export function ResearchDesk() {
                 onClick={async () => {
                   try {
                     setGoogle(
-                      await platform("admin/research", {
+                      await platform<GoogleLiveResult>("admin/research", {
                         action: "google",
                         query,
                       }),
@@ -122,7 +134,7 @@ export function ResearchDesk() {
                   {w}
                 </p>
               ))}
-              {result.links?.map((l: any) => (
+              {result.links?.map((l) => (
                 <p key={l.url}>
                   <a href={l.url} target="_blank" rel="noreferrer">
                     {l.title} ↗
@@ -143,7 +155,7 @@ export function ResearchDesk() {
                 Live reference only. Google content is not copied to the
                 permanent catalog or used to generate descriptions.
               </p>
-              {google.places.map((p: any) => (
+              {google.places.map((p) => (
                 <div className="platform-evidence" key={p.id}>
                   <strong>{p.displayName?.text}</strong>
                   <p>
@@ -156,7 +168,7 @@ export function ResearchDesk() {
                   <a href={p.googleMapsUri} target="_blank" rel="noreferrer">
                     View on Google Maps ↗
                   </a>
-                  {p.attributions?.map((a: any, i: number) => (
+                  {p.attributions?.map((a, i) => (
                     <p key={i}>
                       <a href={a.providerUri}>{a.provider}</a>
                     </p>
@@ -198,7 +210,7 @@ export function ResearchDesk() {
             </Field>
             <Button busy={s.busy}>Add source</Button>
           </form>
-          {s.data?.sources.map((x: any) => (
+          {s.data?.sources.map((x) => (
             <p key={x.host}>
               <strong>{x.host}</strong> · {x.note}
             </p>
@@ -209,8 +221,8 @@ export function ResearchDesk() {
         <h2>Drafts awaiting your eye</h2>
         <div className="platform-actions">
           {s.data?.drafts
-            .filter((r: any) => r.status === "pending")
-            .map((r: any) => (
+            .filter((r) => r.status === "pending")
+            .map((r) => (
               <Button
                 key={r.id}
                 aria-pressed={selected?.id === r.id}
@@ -220,7 +232,7 @@ export function ResearchDesk() {
               </Button>
             ))}
         </div>
-        {s.data && !s.data.drafts.some((d: any) => d.status === "pending") && (
+        {s.data && !s.data.drafts.some((d) => d.status === "pending") && (
           <Empty>
             Search above to create a draft. Unavailable sources never create
             invented listings.
@@ -236,28 +248,26 @@ export function ResearchDesk() {
                 {w}
               </p>
             ))}
-            {Object.entries(selected.data.fields).map(
-              ([key, field]: [string, any]) => (
-                <div className="platform-evidence" key={key}>
-                  <strong>
-                    {key} · {Math.round(field.evidence.confidence * 100)}%
-                    confidence
-                  </strong>
-                  <p>
-                    {typeof field.value === "object"
-                      ? JSON.stringify(field.value)
-                      : String(field.value)}
-                  </p>
-                  <a href={field.evidence.url} target="_blank" rel="noreferrer">
-                    {field.evidence.source} ↗
-                  </a>
-                  <p className="platform-muted">
-                    {field.evidence.licence || "Owner review required"} ·{" "}
-                    {field.evidence.checkedAt}
-                  </p>
-                </div>
-              ),
-            )}
+            {Object.entries(selected.data.fields).map(([key, field]) => (
+              <div className="platform-evidence" key={key}>
+                <strong>
+                  {key} · {Math.round(field.evidence.confidence * 100)}%
+                  confidence
+                </strong>
+                <p>
+                  {typeof field.value === "object"
+                    ? JSON.stringify(field.value)
+                    : String(field.value)}
+                </p>
+                <a href={field.evidence.url} target="_blank" rel="noreferrer">
+                  {field.evidence.source} ↗
+                </a>
+                <p className="platform-muted">
+                  {field.evidence.licence || "Owner review required"} ·{" "}
+                  {field.evidence.checkedAt}
+                </p>
+              </div>
+            ))}
           </section>
           <section className="platform-card">
             <h2>Review & publish</h2>
@@ -278,12 +288,12 @@ export function ResearchDesk() {
               <Button
                 busy={s.busy}
                 onClick={async () => {
-                  const r = await s.run({
+                  const r = (await s.run({
                     action: "translate",
                     id: selected.id,
-                  });
+                  })) as ResearchDraft | null;
                   if (r?.item) {
-                    setSelected({ id: selected.id, data: r });
+                    setSelected({ ...selected, data: r });
                     setEdit(
                       JSON.stringify({ ...r.item, price: r.price }, null, 2),
                     );
@@ -302,12 +312,18 @@ export function ResearchDesk() {
                   url: priceURL,
                   draftId: selected.id,
                 });
-                if (r?.offers?.[0]) {
+                const offers = (r as { offers?: { price: unknown }[] } | null)
+                  ?.offers;
+                if (offers?.[0]) {
                   try {
                     const item = JSON.parse(edit);
-                    item.price = r.offers[0].price;
+                    item.price = offers[0].price;
                     setEdit(JSON.stringify(item, null, 2));
-                  } catch {}
+                  } catch {
+                    s.setMessage(
+                      "The edited JSON is invalid; price not applied.",
+                    );
+                  }
                 }
               }}
             >
@@ -364,7 +380,7 @@ export function ResearchDesk() {
       )}
       <section className="platform-card platform-detail">
         <h2>Official price candidates</h2>
-        {s.data?.watches.map((w: any) => (
+        {s.data?.watches.map((w) => (
           <div className="platform-evidence" key={w.item_id}>
             <strong>
               {w.name} · {w.status}
@@ -431,7 +447,7 @@ export function ResearchDesk() {
               </tr>
             </thead>
             <tbody>
-              {s.data?.prices.map((p: any) => (
+              {s.data?.prices.map((p) => (
                 <tr key={p.id}>
                   <td>{p.name}</td>
                   <td>{p.price?.source || "Unknown"}</td>

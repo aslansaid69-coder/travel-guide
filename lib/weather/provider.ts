@@ -156,6 +156,8 @@ export async function fetchWeather(fetcher: typeof fetch = fetch) {
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("Weather"))
       throw error;
-    throw new Error("Weather provider is temporarily unavailable.");
+    throw new Error("Weather provider is temporarily unavailable.", {
+      cause: error,
+    });
   }
 }

@@ -17,7 +17,7 @@ import { guideSchema } from "./types";
 import { hash, token, HttpError } from "@/lib/hub/security";
 import { planSchema } from "@/lib/hub/types";
 import { commerceSettings, booking } from "./store";
-import { unsubscribeToken, validUnsubscribe } from "@/lib/hub/newsletter";
+import { validUnsubscribe } from "@/lib/hub/newsletter";
 import { siteUrl } from "@/lib/site";
 export async function waitlistJoin(
   email: string,

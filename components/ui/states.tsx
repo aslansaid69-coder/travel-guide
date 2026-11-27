@@ -1,4 +1,153 @@
-'use client';
-import { useState } from 'react';
-import { Check,Play,Plus,Minus,RefreshCw } from 'lucide-react';
-export function UIStates(){const [selected,setSelected]=useState('Mountains'),[guests,setGuests]=useState(2),[dark,setDark]=useState(false);return <main id="main" className="hub-page ui-state-page"><p className="eyebrow">ALMATY · DESIGN VERIFICATION</p><h1>Every action, clearly visible.</h1><p>Reference page for default, hover, focus, pressed, selected, disabled and loading states.</p><button onClick={()=>{const value=!dark;setDark(value);document.documentElement.dataset.theme=value?'dark':'light';}}>Switch to {dark?'light':'dark'} mode</button><section className="hub-panel"><h2>Buttons and icon controls</h2><div className="ui-state-row"><button className="button button-accent">Primary action</button><button className="button button-outline">Secondary action</button><button data-state="hover">Hover example</button><button data-state="active">Pressed example</button><button data-state="focus">Focus example</button><button disabled title="Choose a date first">Unavailable action</button><button aria-busy="true" disabled><RefreshCw size={18}/>Saving…</button><button aria-label="Add a stop"><Plus size={20}/></button></div></section><section className="hub-panel"><h2>Filters, tabs and selected choices</h2><div className="hub-interest-chips ui-state-row">{['Mountains','History','Food'].map(name=><button key={name} aria-pressed={selected===name} onClick={()=>setSelected(name)}>{selected===name&&<Check size={16} aria-hidden/>}{name}</button>)}</div><div className="hub-day-tabs" role="tablist" aria-label="Days"><button role="tab" aria-selected="true"><Check size={16}/>Day 1</button><button role="tab" aria-selected="false">Day 2</button></div><div className="ui-state-row"><button aria-pressed="true"><Check size={16}/>09:00 time slot</button><button aria-pressed="false">11:00 time slot</button><label><input type="checkbox" defaultChecked/> Guide included</label><label><input type="radio" name="method" defaultChecked/>Deposit</label><label><input type="radio" name="method"/>Full payment</label></div></section><section className="hub-panel"><h2>Inputs, counters and menu actions</h2><div className="hub-form-grid"><label>Travel date<input type="date" defaultValue="2026-12-01"/></label><label>Start time<input type="time" defaultValue="09:00"/></label><label>Currency<select defaultValue="KZT"><option>KZT</option><option>USD</option><option>EUR</option></select></label><label>Guide request<input placeholder="A mountain walk, please"/></label></div><div className="ui-state-row"><button aria-label="Remove a guest" disabled={guests===1} onClick={()=>setGuests(Math.max(1,guests-1))}><Minus size={18}/></button><output aria-live="polite">{guests} guests</output><button aria-label="Add a guest" onClick={()=>setGuests(guests+1)}><Plus size={18}/></button><button>Approve draft</button><button>Hide listing</button><button className="ui-danger">Cancel request</button></div></section><section className="hub-panel ui-on-media"><h2>Camera and photo overlays</h2><div className="ui-state-row"><button className="play-button" aria-label="Play camera"><Play size={22}/></button><button aria-pressed="true"><Check size={16}/>Camera selected</button><button className="hub-map-pin" aria-label="Stop one"><span>1</span></button></div></section><p><a href="/plan">Open itinerary editor</a> · <a href="/explore">Open catalog</a> · <a href="/">Return home</a></p></main>;}
+"use client";
+import Link from "next/link";
+import { useState } from "react";
+import { Check, Play, Plus, Minus, RefreshCw } from "lucide-react";
+export function UIStates() {
+  const [selected, setSelected] = useState("Mountains"),
+    [guests, setGuests] = useState(2),
+    [dark, setDark] = useState(false);
+  return (
+    <main id="main" className="hub-page ui-state-page">
+      <p className="eyebrow">ALMATY · DESIGN VERIFICATION</p>
+      <h1>Every action, clearly visible.</h1>
+      <p>
+        Reference page for default, hover, focus, pressed, selected, disabled
+        and loading states.
+      </p>
+      <button
+        onClick={() => {
+          const value = !dark;
+          setDark(value);
+          document.documentElement.dataset.theme = value ? "dark" : "light";
+        }}
+      >
+        Switch to {dark ? "light" : "dark"} mode
+      </button>
+      <section className="hub-panel">
+        <h2>Buttons and icon controls</h2>
+        <div className="ui-state-row">
+          <button className="button button-accent">Primary action</button>
+          <button className="button button-outline">Secondary action</button>
+          <button data-state="hover">Hover example</button>
+          <button data-state="active">Pressed example</button>
+          <button data-state="focus">Focus example</button>
+          <button disabled title="Choose a date first">
+            Unavailable action
+          </button>
+          <button aria-busy="true" disabled>
+            <RefreshCw size={18} />
+            Saving…
+          </button>
+          <button aria-label="Add a stop">
+            <Plus size={20} />
+          </button>
+        </div>
+      </section>
+      <section className="hub-panel">
+        <h2>Filters, tabs and selected choices</h2>
+        <div className="hub-interest-chips ui-state-row">
+          {["Mountains", "History", "Food"].map((name) => (
+            <button
+              key={name}
+              aria-pressed={selected === name}
+              onClick={() => setSelected(name)}
+            >
+              {selected === name && <Check size={16} aria-hidden />}
+              {name}
+            </button>
+          ))}
+        </div>
+        <div className="hub-day-tabs" role="tablist" aria-label="Days">
+          <button role="tab" aria-selected="true">
+            <Check size={16} />
+            Day 1
+          </button>
+          <button role="tab" aria-selected="false">
+            Day 2
+          </button>
+        </div>
+        <div className="ui-state-row">
+          <button aria-pressed="true">
+            <Check size={16} />
+            09:00 time slot
+          </button>
+          <button aria-pressed="false">11:00 time slot</button>
+          <label>
+            <input type="checkbox" defaultChecked /> Guide included
+          </label>
+          <label>
+            <input type="radio" name="method" defaultChecked />
+            Deposit
+          </label>
+          <label>
+            <input type="radio" name="method" />
+            Full payment
+          </label>
+        </div>
+      </section>
+      <section className="hub-panel">
+        <h2>Inputs, counters and menu actions</h2>
+        <div className="hub-form-grid">
+          <label>
+            Travel date
+            <input type="date" defaultValue="2026-12-01" />
+          </label>
+          <label>
+            Start time
+            <input type="time" defaultValue="09:00" />
+          </label>
+          <label>
+            Currency
+            <select defaultValue="KZT">
+              <option>KZT</option>
+              <option>USD</option>
+              <option>EUR</option>
+            </select>
+          </label>
+          <label>
+            Guide request
+            <input placeholder="A mountain walk, please" />
+          </label>
+        </div>
+        <div className="ui-state-row">
+          <button
+            aria-label="Remove a guest"
+            disabled={guests === 1}
+            onClick={() => setGuests(Math.max(1, guests - 1))}
+          >
+            <Minus size={18} />
+          </button>
+          <output aria-live="polite">{guests} guests</output>
+          <button
+            aria-label="Add a guest"
+            onClick={() => setGuests(guests + 1)}
+          >
+            <Plus size={18} />
+          </button>
+          <button>Approve draft</button>
+          <button>Hide listing</button>
+          <button className="ui-danger">Cancel request</button>
+        </div>
+      </section>
+      <section className="hub-panel ui-on-media">
+        <h2>Camera and photo overlays</h2>
+        <div className="ui-state-row">
+          <button className="play-button" aria-label="Play camera">
+            <Play size={22} />
+          </button>
+          <button aria-pressed="true">
+            <Check size={16} />
+            Camera selected
+          </button>
+          <button className="hub-map-pin" aria-label="Stop one">
+            <span>1</span>
+          </button>
+        </div>
+      </section>
+      <p>
+        <a href="/plan">Open itinerary editor</a> ·{" "}
+        <a href="/explore">Open catalog</a> · <Link href="/">Return home</Link>
+      </p>
+    </main>
+  );
+}

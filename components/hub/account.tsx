@@ -5,7 +5,9 @@ import { api } from "./shared";
 import { Loyalty } from "@/components/platform/extras";
 import { useT } from "./language";
 export function Account() {
-  const [plans, setPlans] = useState<any[]>([]),
+  const [plans, setPlans] = useState<
+      { id: string; title: string; start_date: string; version: number }[]
+    >([]),
     [message, setMessage] = useState("");
   const t = useT();
   useEffect(() => {

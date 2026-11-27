@@ -12,8 +12,11 @@
   Many entities (catalog items, settings, guides) are stored as `jsonb` and validated with **zod** schemas
   (`lib/hub/types.ts`, `lib/platform/types.ts`).
 - **Auth:** Neon Auth (`@neon/auth`), email one-time-code sign-in, proxied by `app/api/auth/[...path]/route.ts`.
-  Roles in table `staff_roles` (`owner | manager | partner | guide`); owner bootstrapped from `OWNER_EMAILS`.
-  Helpers: `lib/auth/owner.ts` (`ownerSession`), `lib/hub/access.ts` (`staffSession`, `requireStaff`, `clientSession`).
+  Roles: OWNER / ADMIN / GUIDE / TOURIST (+ legacy PARTNER). Pure RBAC in `lib/auth/roles.ts` (`can`, `PERMISSIONS`);
+  server helpers in `lib/auth/session.ts` (`currentUser`, `authorize(permission)` for actions/APIs,
+  `requirePage(permission)` for pages). OWNER comes only from `OWNER_EMAILS`; other roles live in `staff_roles`.
+  `proxy.ts` gates `/admin/**` (owner/admin) and `/account`, `/guide` (signed in); every handler re-checks.
+  Legacy helpers `lib/hub/access.ts` (`staffSession`, `requireStaff`) map DB `manager` → `admin`.
 - **Payments:** Stripe hosted Checkout + webhook `app/api/payments/webhook/route.ts` (`lib/platform/commerce.ts`).
 - **Maps:** Leaflet + OpenStreetMap tiles (`components/hub/map.tsx`); optional OpenRouteService for road routes.
 - **Places discovery:** Google Places API (New) / OSM Overpass / Wikipedia (`lib/hub/discovery.ts`, `lib/platform/research.ts`).
@@ -45,7 +48,9 @@ npm test               # unit tests (node --test via tsx)
 npm run typecheck      # tsc --noEmit
 npm run lint           # eslint
 npm run build          # production build (must pass)
-npm run db:migrate     # applies migrations using .env.local (DATABASE_URL / DATABASE_URL_UNPOOLED)
+npm run db:migrate         # applies pending migrations (tracked in schema_migrations) using .env.local
+npm run db:migrate:status  # dry run: lists pending migrations
+npm run db:migrate:prod    # same runner, env taken from the shell (CI / production)
 ```
 
 Run migrations against a **Neon dev branch** first; never run integration scripts against production.
@@ -65,7 +70,9 @@ Everything except `NEXT_PUBLIC_*` is server-only — never import secrets into c
 - Authorization is enforced **on the server** for every page, route handler and server action — never only in UI.
   Throw `HttpError(status, message)`; route dispatchers turn it into JSON.
 - State-changing requests: `origin(request)` (same-origin check) + `limit(request, key, max)` (DB rate limit).
-- Every admin mutation writes to `admin_audit` (who, action, target, details, time).
+- Every admin mutation writes to `admin_audit` via `recordAudit()` (`lib/audit.ts`: who, role, action, target, details, IP, time).
+- New admin pages live under `app/admin/*` (layout enforces `admin.access`), use server actions that start with
+  `authorize(...)`, validate `FormData` with zod (`lib/admin/form.ts`) and paginate via `lib/admin/list.ts`.
 - Money is integer minor units (`*_minor`) + ISO currency. Never invent prices: unknown stays `null` / "not found".
 - Migrations: add a new numbered file, keep it idempotent, register it in `scripts/migrate.ts`. Never edit an applied one.
 - UI copy supports EN/RU (`components/hub/language.tsx`); keep both when adding strings.

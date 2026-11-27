@@ -2,14 +2,7 @@ import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
 import { database } from "@/lib/db";
 import { stripe, checkout, confirmArrival } from "@/lib/hub/bookings";
-import {
-  getPlan,
-  settings,
-  notify,
-  audit,
-  catalog,
-  rates,
-} from "@/lib/hub/store";
+import { notify, audit } from "@/lib/hub/store";
 import { HttpError, hash } from "@/lib/hub/security";
 import { commerceSettings, notifyBooking, paymentLink } from "./store";
 import type { CommerceSettings } from "./types";
@@ -324,12 +317,12 @@ export async function paymentEnriched(
         : session.invoice;
     await recordInvoice(invoice, session.id);
   }
-  let intent: Stripe.PaymentIntent | null = null;
-  if (typeof session.payment_intent === "string")
-    intent = await service.paymentIntents.retrieve(session.payment_intent, {
-      expand: ["latest_charge"],
-    });
-  else intent = session.payment_intent;
+  const intent: Stripe.PaymentIntent | null =
+    typeof session.payment_intent === "string"
+      ? await service.paymentIntents.retrieve(session.payment_intent, {
+          expand: ["latest_charge"],
+        })
+      : session.payment_intent;
   const charge =
     intent?.latest_charge && typeof intent.latest_charge !== "string"
       ? intent.latest_charge

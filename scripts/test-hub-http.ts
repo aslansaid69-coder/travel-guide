@@ -32,7 +32,7 @@ try {
   assert.equal(admin.status, 401);
   const c = await (await call("/api/hub/catalog")).json();
   assert(c.items.length >= 7);
-  assert(c.items.every((i: any) => i.status === "approved"));
+  assert(c.items.every((i: { status: string }) => i.status === "approved"));
   assert(!JSON.stringify(c).includes("edit_hash"));
   const plan = {
     title: "HTTP integration plan",

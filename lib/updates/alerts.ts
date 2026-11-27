@@ -35,7 +35,9 @@ export async function sendAlert(
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("Email"))
       throw error;
-    throw new Error("Email provider is temporarily unavailable.");
+    throw new Error("Email provider is temporarily unavailable.", {
+      cause: error,
+    });
   }
 }
 export async function drainAlerts() {

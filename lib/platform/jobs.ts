@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { database } from "@/lib/db";
-import { notify, availableSlots, catalog } from "@/lib/hub/store";
+import { notify, availableSlots } from "@/lib/hub/store";
 import { getWeather } from "@/lib/weather/read";
 import { drainNotifications } from "@/lib/hub/notifications";
 import { beginRun, finishRun } from "@/lib/updates/store";
